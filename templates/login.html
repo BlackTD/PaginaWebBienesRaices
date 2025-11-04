@@ -1,0 +1,56 @@
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Iniciar Sesión</title>
+    <link href="https://cdn.tailwindcss.com" rel="stylesheet"/>
+    <script>
+        // Mostrar tiempo restante dinámicamente
+        function updateTimeRemaining() {
+            var remainingTime = parseInt('{{ remaining_time if remaining_time else 0 }}');
+            if (remainingTime > 0) {
+                document.getElementById('time_remaining').innerText = remainingTime + ' segundos';
+                setTimeout(function() {
+                    updateTimeRemaining();
+                }, 1000);
+            }
+        }
+        window.onload = updateTimeRemaining;
+    </script>    
+</head>
+<body>
+    <div class="max-w-md mx-auto mt-8 p-6 bg-white shadow rounded">
+        <a class="hover:underline" href="{{ url_for('index') }}">Inicio</a>
+        <li><a class="hover:underline" href="/catalogo">Catalogo</a></li>
+        <h2 class="text-2xl font-bold mb-4">Iniciar Sesión</h2>
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="mb-4">
+                    {% for message in messages %}
+                        <li class="text-red-500">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        
+        <form action="/login" method="POST">
+            <div class="mb-4">
+                <label for="username" class="block text-gray-700">Usuario</label>
+                <input type="text" id="username" name="username" class="w-full p-2 border border-gray-300 rounded mt-2" value="{{ username or '' }}" required />
+            </div>
+            <div class="mb-4">
+                <label for="password" class="block text-gray-700">Contraseña</label>
+                <input type="password" id="password" name="password" class="w-full p-2 border border-gray-300 rounded mt-2" required />
+            </div>
+            <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded w-full">Iniciar Sesión</button>
+        </form>
+
+        {% if lock_time %}
+        <div class="mt-4 text-red-500">
+            <p>Usuario bloqueado. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span></p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

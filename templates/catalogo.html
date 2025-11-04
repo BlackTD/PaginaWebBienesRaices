@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta content="Bienes raíces - Encuentra tu hogar ideal con nosotros." name="description" />
+    <meta content="bienes raíces, propiedades, casas, apartamentos, venta, alquiler" name="keywords" />
+    <title>Bienes Raíces</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet" />
+    <style>
+        body {
+            scroll-behavior: smooth;
+        }
+
+        header {
+            background: linear-gradient(to right, #ffffff, #9b0000);
+        }
+
+        header nav ul li a:hover {
+            color: #fbbf24;
+            transition: color 0.3s ease;
+        }
+
+        section {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .property-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .property-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, #f63b3b, #f63b3b);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to right, #9b0000, #9b0000);
+        }
+    </style>
+</head>
+
+<body class="font-roboto bg-gray-100">
+    <!-- Sección Principal (Home) -->
+    <header class="text-white p-6">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="CARINA_BECERRA-removebg-preview.png" alt="Logo" class="h-20 w-25"/>
+            </div>
+            <nav>
+                <ul class="flex space-x-4">
+                    <a class="hover:underline" href="{{ url_for('index') }}">
+                        Inicio
+                       </a>
+                    {% if not session.get('logged_in') %}
+                        <li><a class="hover:underline" href="{{ url_for('login') }}">Iniciar Sesión</a></li>
+                    {% endif %}
+                    <!-- Este botón solo será visible si el usuario ha iniciado sesión -->
+                    {% if session.get('logged_in') %}
+                        <li><a class="hover:underline" href="/adminis">Admin</a></li>
+                    {% endif %}
+                    <!-- Dentro de la navegación de index.html -->
+                    {% if session.get('logged_in') %}
+                    <li><a class="hover:underline" href="/logout">Cerrar Sesión</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+    <section class="bg-gray-200 py-12" id="catalog">
+        <div class="container mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-8">Catálogo de Propiedades</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {% for property in properties %}
+                <div class="property-card bg-white p-6 rounded shadow">
+                    <img alt="{{ property.name }}" 
+                    src="{{ url_for('static', filename=property.main_image.split('static/')[-1]) if property.main_image else 'https://via.placeholder.com/600x400' }}" 
+                    class="w-full h-48 object-cover rounded-md" />
+                    <h3 class="text-2xl font-bold mt-4">{{ property.name }}</h3>
+                    <p class="mt-2">Ubicación: {{ property.location }}</p>
+                    <p class="mt-2">Precio: ${{ property.price }}</p>
+                    <a class="btn-primary text-white py-2 px-4 rounded mt-4 inline-block" href="{{ url_for('property_detail', property_id=property.id) }}">Ver más</a>
+                </div>
+                {% endfor %}
+            </div>            
+        </div>
+    </section>
+</body>
+
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Bienes raíces - Encuentra tu hogar ideal con nosotros.">
+  <meta name="keywords" content="bienes raíces, propiedades, casas, apartamentos, venta, alquiler">
+  <title>Agregar Propiedad</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="font-roboto bg-gray-100">
+  <header class="bg-blue-600 text-white p-6">
+    <div class="container mx-auto flex justify-between items-center">
+      <h1 class="text-3xl font-bold">Bienes Raíces</h1>
+      <nav>
+        <ul class="flex space-x-4">
+          <li><a class="hover:underline" href="{{ url_for('index') }}">Inicio</a></li>
+          <li><a class="hover:underline" href="{{ url_for('catalogo') }}">Catálogo</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container mx-auto my-8">
+    <h1 class="text-2xl font-bold mb-4">Agregar Nueva Propiedad</h1>
+    <form method="POST" action="{{ url_for('add_property') }}" enctype="multipart/form-data">
+      <input type="text" name="name" placeholder="Nombre de la propiedad" required>
+      <textarea name="description" placeholder="Descripción" required></textarea>
+      <input type="text" name="location" placeholder="Ubicación" required>
+      <input type="number" name="price" placeholder="Precio" step="0.01" required>
+      
+      <!-- Cargar imagen principal -->
+      <label for="main_image">Imagen Principal</label>
+      <input type="file" name="main_image" id="main_image" accept="image/*" required>
+      
+      <!-- Cargar imágenes de repertorio -->
+      <label for="repertory_images">Imágenes de Repertorio</label>
+      <input type="file" name="repertory_images" id="repertory_images" accept="image/*" multiple>
+      
+      <button type="submit">Agregar Propiedad</button>
+  </form>  
+  </div>
+</body>
+</html>

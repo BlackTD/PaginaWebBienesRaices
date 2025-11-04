@@ -1,0 +1,138 @@
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta content="Bienes raíces - Encuentra tu hogar ideal con nosotros." name="description"/>
+    <meta content="bienes raíces, propiedades, casas, apartamentos, venta, alquiler" name="keywords"/>
+    <title>Bienes Raíces</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet"/>
+    <style>
+        body {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        header {
+            animation: slideDown 1s ease-in-out;
+            background: linear-gradient(to right, #ffffff, #9b0000);
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        a {
+            transition: color 0.3s ease, transform 0.3s ease;
+        }
+
+        a:hover {
+            color: #ffdfdf;
+            transform: scale(1.1);
+        }
+
+        button, .btn {
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        button:hover, .btn:hover {
+            background-color: #e53e3e;
+            transform: scale(1.05);
+        }
+
+        .fade-up {
+            animation: fadeUp 1s ease-in-out;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-left {
+            animation: fadeLeft 1s ease-in-out;
+        }
+
+        @keyframes fadeLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .fade-right {
+            animation: fadeRight 1s ease-in-out;
+        }
+
+        @keyframes fadeRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body class="font-roboto bg-gray-100">
+    <header class="bg-red-600 text-white p-6 fade-down">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <img src="CARINA_BECERRA-removebg-preview.png" alt="Logo" class="h-20 w-25"/>
+                <h1 class="text-3xl font-bold"></h1>
+            </div>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li><a class="hover:underline" href="/catalogo">Catalogo</a></li>
+                    <!-- Este botón solo será visible si el usuario no está logueado -->
+                    {% if not session.get('logged_in') %}
+                        <li><a class="hover:underline" href="{{ url_for('login') }}">Iniciar Sesión</a></li>
+                    {% endif %}
+                    <!-- Este botón solo será visible si el usuario ha iniciado sesión -->
+                    {% if session.get('logged_in') %}
+                        <li><a class="hover:underline" href="/adminis">Admin</a></li>
+                    {% endif %}
+                    <!-- Dentro de la navegación de index.html -->
+                    {% if session.get('logged_in') %}
+                    <li><a class="hover:underline" href="/logout">Cerrar Sesión</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <section class="bg-white py-12 fade-up" id="home">
+        <div class="container mx-auto text-center">
+            <h2 class="text-4xl font-bold mb-4">Bienvenido a Bienes Raíces</h2>
+            <p class="text-lg mb-8">Encuentra tu hogar ideal con nosotros. Ofrecemos las mejores propiedades en las mejores ubicaciones.</p>
+            <img alt="Imagen de una casa moderna con jardín" class="mx-auto mb-8" src="https://placehold.co/600x400"/>
+        </div>
+    </section>
+</body>
+</html>

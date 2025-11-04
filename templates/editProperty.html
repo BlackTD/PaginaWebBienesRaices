@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editar Propiedad</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+    <nav>
+        <ul class="flex space-x-4">
+            <a class="hover:underline" href="{{ url_for('index') }}">
+                Inicio
+            </a>
+            <li><a class="hover:underline" href="{{ url_for('catalogo') }}">Catálogo</a></li>
+            {% if not session.get('logged_in') %}
+                <li><a class="hover:underline" href="{{ url_for('login') }}">Iniciar Sesión</a></li>
+            {% endif %}
+            {% if session.get('logged_in') %}
+                <li><a class="hover:underline" href="/adminis">Admin</a></li>
+            {% endif %}
+            {% if session.get('logged_in') %}
+            <li><a class="hover:underline" href="/logout">Cerrar Sesión</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto mt-12">
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <h1 class="text-3xl font-bold mb-4">Editar Propiedad: {{ property.name }}</h1>
+            <form action="{{ url_for('edit_property', property_id=property.id) }}" method="POST" enctype="multipart/form-data">
+                <div class="mb-4">
+                    <label for="name" class="block text-gray-700">Nombre de la Propiedad</label>
+                    <input type="text" id="name" name="name" value="{{ property.name }}" class="w-full p-2 mt-1 border border-gray-300 rounded-md" required />
+                </div>
+
+                <div class="mb-4">
+                    <label for="description" class="block text-gray-700">Descripción</label>
+                    <textarea id="description" name="description" rows="4" class="w-full p-2 mt-1 border border-gray-300 rounded-md" required>{{ property.description }}</textarea>
+                </div>
+
+                <div class="mb-4">
+                    <label for="location" class="block text-gray-700">Ubicación</label>
+                    <input type="text" id="location" name="location" value="{{ property.location }}" class="w-full p-2 mt-1 border border-gray-300 rounded-md" required />
+                </div>
+
+                <div class="mb-4">
+                    <label for="price" class="block text-gray-700">Precio</label>
+                    <input type="number" id="price" name="price" value="{{ property.price }}" class="w-full p-2 mt-1 border border-gray-300 rounded-md" required />
+                </div>
+
+                <div class="mb-4">
+                    <label for="main_image" class="block text-gray-700">Imagen Principal</label>
+                    {% if property.main_image %}
+                    <img src="{{ url_for('static', filename=property.main_image.split('static/')[-1]) }}" 
+                        alt="Imagen principal de {{ property.name }}" 
+                        class="w-full h-48 object-cover rounded-md mb-2" />
+                    {% else %}
+                    <img src="https://via.placeholder.com/600x400" 
+                        alt="Imagen no disponible" 
+                        class="w-full h-48 object-cover rounded-md mb-2" />
+                    {% endif %}
+                    <input type="file" id="main_image" name="main_image" class="block w-full p-2 mt-1" />
+                </div>
+
+                <div class="mb-4">
+                    <label for="repertory_images" class="block text-gray-700">Imágenes de Repertorio</label>
+                    {% if property.repertory_images %}
+                    <div class="flex space-x-4 mt-2">
+                        {% for image in property.repertory_images.split(',') %}
+                        <div class="relative">
+                            <img src="{{ url_for('static', filename=image.split('static/')[-1]) }}" 
+                                alt="Imagen adicional de {{ property.name }}" 
+                                class="w-32 h-32 object-cover rounded-md shadow-lg" />
+                            <button type="button" class="absolute top-0 right-0 bg-red-500 text-white px-2 py-1 rounded-full" onclick="removeImage('{{ image }}')">
+                                Eliminar
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <input type="file" id="repertory_images" name="repertory_images" multiple class="block w-full p-2 mt-1" />
+                </div>
+
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Guardar Cambios</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        function removeImage(image) {
+            if (confirm('¿Estás seguro de que deseas eliminar esta imagen?')) {
+                fetch('/remove_repertory_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ image: image })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload(); // Recargar la página para ver los cambios
+                    } else {
+                        alert('Error al eliminar la imagen.');
+                    }
+                });
+            }
+        }
+    </script>    
+</body>
+
+</html>
