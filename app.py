@@ -5,7 +5,6 @@ from models import db, User, Property
 from config import Config
 import os
 from werkzeug.utils import secure_filename
-from datetime import datetime, timedelta
 import time
 
 app = Flask(__name__)
@@ -18,11 +17,6 @@ migrate = Migrate(app, db)
 @app.before_request
 def create_tables():
     db.create_all()  # Crea las tablas si no existen
-
-# Ruta para la página principal
-@app.route('/')
-def home():
-    return render_template('index.html')
 
 ## Método para verificar si un usuario está bloqueado
 def is_user_blocked(username):
@@ -62,7 +56,7 @@ def login():
             if user.password == password:
                 session['logged_in'] = True
                 session.pop(f'failed_attempts_{username}', None)  # Limpiar los intentos fallidos
-                return redirect(url_for('home'))
+                return redirect(url_for('index'))
             else:
                 # Obtener los intentos fallidos almacenados en sesión
                 failed_attempts = session.get(f'failed_attempts_{username}', 0)
@@ -223,11 +217,12 @@ def edit_property(property_id):
 @app.route('/logout')
 def logout():
     session.pop('logged_in', None)  # Eliminar la sesión
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    featured_properties = Property.query.order_by(Property.id.desc()).limit(3).all()
+    return render_template('index.html', featured_properties=featured_properties)
 
 @app.route('/catalogo')
 def catalogo():
