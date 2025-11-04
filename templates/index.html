@@ -1,138 +1,235 @@
-<html lang="es">
-<head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <meta content="Bienes raíces - Encuentra tu hogar ideal con nosotros." name="description"/>
-    <meta content="bienes raíces, propiedades, casas, apartamentos, venta, alquiler" name="keywords"/>
-    <title>Bienes Raíces</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet"/>
-    <style>
-        body {
-            animation: fadeIn 1s ease-in-out;
-        }
+{% extends 'base.html' %}
+{% block title %}Inicio · Bienes Raíces Boutique{% endblock %}
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-
-        header {
-            animation: slideDown 1s ease-in-out;
-            background: linear-gradient(to right, #ffffff, #9b0000);
-        }
-
-        @keyframes slideDown {
-            from {
-                transform: translateY(-100%);
-            }
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        a {
-            transition: color 0.3s ease, transform 0.3s ease;
-        }
-
-        a:hover {
-            color: #ffdfdf;
-            transform: scale(1.1);
-        }
-
-        button, .btn {
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
-
-        button:hover, .btn:hover {
-            background-color: #e53e3e;
-            transform: scale(1.05);
-        }
-
-        .fade-up {
-            animation: fadeUp 1s ease-in-out;
-        }
-
-        @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .fade-left {
-            animation: fadeLeft 1s ease-in-out;
-        }
-
-        @keyframes fadeLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .fade-right {
-            animation: fadeRight 1s ease-in-out;
-        }
-
-        @keyframes fadeRight {
-            from {
-                opacity: 0;
-                transform: translateX(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-    </style>
-</head>
-<body class="font-roboto bg-gray-100">
-    <header class="bg-red-600 text-white p-6 fade-down">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-                <img src="CARINA_BECERRA-removebg-preview.png" alt="Logo" class="h-20 w-25"/>
-                <h1 class="text-3xl font-bold"></h1>
+{% block content %}
+<section class="relative isolate overflow-hidden">
+    <div class="mx-auto flex max-w-7xl flex-col-reverse items-center gap-14 px-6 py-20 lg:flex-row lg:py-28">
+        <div class="space-y-6 lg:w-1/2 animate-on-scroll">
+            <span class="inline-flex items-center gap-2 rounded-full bg-rose-100 px-4 py-1 text-sm font-semibold text-rose-500 shadow-sm">
+                <i class="fa-solid fa-key"></i> Hogares con historias felices
+            </span>
+            <h1 class="section-title text-4xl leading-tight sm:text-5xl">Creamos conexiones entre personas y espacios que inspiran.</h1>
+            <p class="text-lg text-slate-600">Descubre residencias exclusivas, departamentos con estilo y oportunidades de inversión. Nuestro equipo te acompaña para tomar decisiones seguras y emocionantes.</p>
+            <div class="flex flex-wrap items-center gap-4">
+                <a class="btn-primary" href="{{ url_for('catalogo') }}"><i class="fa-solid fa-magnifying-glass"></i> Explorar catálogo</a>
+                <a class="btn-secondary" href="#contacto"><i class="fa-solid fa-comments"></i> Solicitar asesoría</a>
             </div>
-            <nav>
-                <ul class="flex space-x-4">
-                    <li><a class="hover:underline" href="/catalogo">Catalogo</a></li>
-                    <!-- Este botón solo será visible si el usuario no está logueado -->
-                    {% if not session.get('logged_in') %}
-                        <li><a class="hover:underline" href="{{ url_for('login') }}">Iniciar Sesión</a></li>
-                    {% endif %}
-                    <!-- Este botón solo será visible si el usuario ha iniciado sesión -->
-                    {% if session.get('logged_in') %}
-                        <li><a class="hover:underline" href="/adminis">Admin</a></li>
-                    {% endif %}
-                    <!-- Dentro de la navegación de index.html -->
-                    {% if session.get('logged_in') %}
-                    <li><a class="hover:underline" href="/logout">Cerrar Sesión</a></li>
-                    {% endif %}
-                </ul>
-            </nav>
+            <div class="grid grid-cols-3 gap-4 pt-8 text-center text-sm font-medium text-slate-600">
+                <div class="glass-card px-4 py-5">
+                    <p class="text-3xl font-semibold text-rose-500">150+</p>
+                    <p>Familias felices</p>
+                </div>
+                <div class="glass-card px-4 py-5">
+                    <p class="text-3xl font-semibold text-rose-500">12</p>
+                    <p>Años de experiencia</p>
+                </div>
+                <div class="glass-card px-4 py-5">
+                    <p class="text-3xl font-semibold text-rose-500">98%</p>
+                    <p>Satisfacción</p>
+                </div>
+            </div>
         </div>
-    </header>
+        <div class="relative w-full max-w-xl lg:w-1/2 animate-on-scroll">
+            <div class="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-gradient-to-br from-rose-200 to-transparent blur-2xl"></div>
+            <div class="absolute -bottom-8 -right-10 h-48 w-48 rounded-full bg-gradient-to-br from-sky-200 to-transparent blur-2xl"></div>
+            <div class="glass-card overflow-hidden">
+                <img src="https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?auto=format&fit=crop&w=1200&q=80" alt="Casa moderna con grandes ventanales" class="h-96 w-full object-cover" />
+                <div class="flex items-center justify-between px-6 py-4 text-sm text-slate-600">
+                    <div>
+                        <p class="font-semibold text-slate-800">Residencias curadas a detalle</p>
+                        <p>Visitas guiadas · Planes de inversión</p>
+                    </div>
+                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-emerald-600"><i class="fa-solid fa-star"></i> Premium</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <section class="bg-white py-12 fade-up" id="home">
-        <div class="container mx-auto text-center">
-            <h2 class="text-4xl font-bold mb-4">Bienvenido a Bienes Raíces</h2>
-            <p class="text-lg mb-8">Encuentra tu hogar ideal con nosotros. Ofrecemos las mejores propiedades en las mejores ubicaciones.</p>
-            <img alt="Imagen de una casa moderna con jardín" class="mx-auto mb-8" src="https://placehold.co/600x400"/>
+<section class="relative py-20">
+    <div class="mx-auto max-w-7xl px-6">
+        <div class="mx-auto max-w-3xl text-center animate-on-scroll">
+            <span class="inline-flex items-center justify-center rounded-full bg-blue-100 px-4 py-1 text-sm font-semibold text-blue-600">Nuestra propuesta</span>
+            <h2 class="section-title mt-4 text-4xl">Te acompañamos con visión estratégica y calidez humana</h2>
+            <p class="mt-4 text-lg text-slate-600">Integramos marketing inmobiliario, asesoría financiera y un servicio personalizado para encontrar la propiedad que refleja tu estilo de vida.</p>
         </div>
-    </section>
-</body>
-</html>
+        <div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <article class="glass-card animate-on-scroll p-8">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-500"><i class="fa-solid fa-handshake-angle text-2xl"></i></div>
+                <h3 class="mt-6 text-xl font-semibold text-slate-900">Acompañamiento integral</h3>
+                <p class="mt-3 text-slate-600">Coordinamos visitas, negociaciones y trámites con transparencia absoluta. Tu tranquilidad es nuestra prioridad.</p>
+            </article>
+            <article class="glass-card animate-on-scroll p-8">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-500"><i class="fa-solid fa-chart-line text-2xl"></i></div>
+                <h3 class="mt-6 text-xl font-semibold text-slate-900">Visión de inversión</h3>
+                <p class="mt-3 text-slate-600">Analizamos el potencial de cada propiedad para que tomes decisiones que protejan y hagan crecer tu patrimonio.</p>
+            </article>
+            <article class="glass-card animate-on-scroll p-8">
+                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-500"><i class="fa-solid fa-compass-drafting text-2xl"></i></div>
+                <h3 class="mt-6 text-xl font-semibold text-slate-900">Selección curada</h3>
+                <p class="mt-3 text-slate-600">Presentamos opciones únicas, evaluadas en arquitectura, ubicación y estilo de vida para sorprenderte en cada visita.</p>
+            </article>
+        </div>
+    </div>
+</section>
+
+<section class="relative bg-white/70 py-20">
+    <div class="mx-auto max-w-7xl px-6">
+        <div class="flex flex-col justify-between gap-6 pb-10 md:flex-row md:items-end">
+            <div class="animate-on-scroll">
+                <h2 class="section-title text-4xl">Propiedades destacadas</h2>
+                <p class="mt-4 max-w-2xl text-lg text-slate-600">Explora una selección de espacios listos para habitar o invertir. Agenda un recorrido y vive la experiencia.</p>
+            </div>
+            <a class="btn-secondary animate-on-scroll" href="{{ url_for('catalogo') }}"><i class="fa-solid fa-layer-group"></i> Ver catálogo completo</a>
+        </div>
+        <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {% if featured_properties %}
+                {% for property in featured_properties %}
+                    <article class="group glass-card overflow-hidden transition-transform duration-500 hover:-translate-y-2 animate-on-scroll">
+                        <div class="relative h-60 overflow-hidden">
+                            <img src="{{ url_for('static', filename=property.main_image.split('static/')[-1]) if property.main_image else 'https://images.unsplash.com/photo-1523217582562-09d0def993a6?auto=format&fit=crop&w=1200&q=80' }}" alt="Imagen de {{ property.name }}" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-900/70 via-slate-900/0"></div>
+                            <div class="absolute bottom-4 left-4 flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-medium text-slate-700 backdrop-blur">
+                                <i class="fa-solid fa-location-dot text-rose-500"></i>
+                                <span>{{ property.location }}</span>
+                            </div>
+                        </div>
+                        <div class="space-y-3 px-6 py-5">
+                            <h3 class="text-xl font-semibold text-slate-900">{{ property.name }}</h3>
+                            <p class="text-sm text-slate-500">{{ property.description }}</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-semibold text-rose-500">${{ '%.2f'|format(property.price) }}</span>
+                                <a href="{{ url_for('property_detail', property_id=property.id) }}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 transition-colors hover:text-rose-500">
+                                    Detalles <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <div class="glass-card p-10 text-center md:col-span-2 lg:col-span-3 animate-on-scroll">
+                    <h3 class="text-2xl font-semibold text-slate-900">Aún no hay propiedades cargadas</h3>
+                    <p class="mt-3 text-slate-600">Visita nuestro catálogo pronto o inicia sesión para cargar la primera propiedad.</p>
+                    <div class="mt-6 flex justify-center gap-4">
+                        <a class="btn-primary" href="{{ url_for('catalogo') }}"><i class="fa-solid fa-building"></i> Ver catálogo</a>
+                        {% if not session.get('logged_in') %}
+                            <a class="btn-secondary" href="{{ url_for('login') }}"><i class="fa-solid fa-user-lock"></i> Iniciar sesión</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<section class="relative py-20">
+    <div class="mx-auto max-w-7xl px-6">
+        <div class="grid gap-12 lg:grid-cols-2">
+            <div class="space-y-8 animate-on-scroll">
+                <h2 class="section-title text-4xl">Tu experiencia inmobiliaria en 3 pasos</h2>
+                <p class="text-lg text-slate-600">Simplificamos el proceso para que disfrutes cada momento. Coordinamos agendas, negociamos por ti y cuidamos cada detalle hasta la entrega.</p>
+                <div class="space-y-6">
+                    <div class="glass-card flex items-start gap-4 p-6">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 text-lg font-semibold text-rose-500">1</span>
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-900">Descubrimiento personal</h3>
+                            <p class="text-sm text-slate-600">Conversamos sobre tu estilo, necesidades y presupuesto para construir una ruta a medida.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card flex items-start gap-4 p-6">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-lg font-semibold text-blue-500">2</span>
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-900">Selección curada</h3>
+                            <p class="text-sm text-slate-600">Coordinamos visitas privadas y compartimos análisis comparativos de cada propiedad.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card flex items-start gap-4 p-6">
+                        <span class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-semibold text-emerald-500">3</span>
+                        <div>
+                            <h3 class="text-lg font-semibold text-slate-900">Cierre impecable</h3>
+                            <p class="text-sm text-slate-600">Negociamos por ti, cuidamos la documentación y celebramos contigo el inicio de tu nueva etapa.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="space-y-8 animate-on-scroll">
+                <div class="glass-card p-8">
+                    <h3 class="text-2xl font-semibold text-slate-900">Lo que nuestros clientes dicen</h3>
+                    <div class="mt-6 space-y-6">
+                        <blockquote class="rounded-2xl bg-white/70 p-6 shadow-sm">
+                            <p class="text-slate-600">“Encontraron el departamento perfecto en tiempo récord. Se encargaron de todo, incluso de la negociación del precio. Experiencia impecable.”</p>
+                            <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                <span><strong class="text-slate-800">Mariana & Luis</strong> · Inversores</span>
+                                <div class="flex items-center gap-1 text-rose-400"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+                            </div>
+                        </blockquote>
+                        <blockquote class="rounded-2xl bg-white/70 p-6 shadow-sm">
+                            <p class="text-slate-600">“Sentimos un acompañamiento muy humano. Se ocuparon hasta del contrato de renta y la decoración inicial. ¡Gracias por hacer fácil lo complejo!”</p>
+                            <div class="mt-4 flex items-center justify-between text-sm text-slate-500">
+                                <span><strong class="text-slate-800">Familia Herrera</strong> · Arrendatarios</span>
+                                <div class="flex items-center gap-1 text-rose-400"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                            </div>
+                        </blockquote>
+                    </div>
+                </div>
+                <div class="glass-card p-8">
+                    <h3 class="text-2xl font-semibold text-slate-900">Acceso exclusivo</h3>
+                    <p class="mt-3 text-slate-600">Recibe antes que nadie nuestras nuevas propiedades, aperturas de preventa y oportunidades de inversión.</p>
+                    <form class="mt-6 flex flex-col gap-4 sm:flex-row">
+                        <input type="email" required placeholder="Tu correo electrónico" class="flex-1 rounded-full border border-slate-200 bg-white/70 px-5 py-3 text-sm text-slate-600 shadow-sm focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                        <button type="submit" class="btn-primary whitespace-nowrap"><i class="fa-solid fa-paper-plane"></i> Suscribirme</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="contacto" class="relative py-20">
+    <div class="mx-auto max-w-6xl rounded-[32px] bg-gradient-to-r from-rose-500 via-rose-400 to-amber-400 px-8 py-16 text-white shadow-2xl">
+        <div class="grid gap-12 lg:grid-cols-[1.2fr,1fr]">
+            <div class="space-y-6 animate-on-scroll">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-semibold">Contacto directo</span>
+                <h2 class="text-4xl font-semibold leading-tight">Agenda una visita privada o recibe una valuación gratuita de tu propiedad.</h2>
+                <p class="max-w-xl text-white/80">Comparte tus datos y nuestro equipo te contactará en menos de 24 horas para brindarte una asesoría personalizada.</p>
+                <div class="flex flex-col gap-3 text-sm text-white/85">
+                    <a class="flex items-center gap-3" href="tel:+521234567890"><i class="fa-solid fa-phone-volume"></i> +52 123 456 7890</a>
+                    <a class="flex items-center gap-3" href="mailto:contacto@cbinmobiliaria.com"><i class="fa-solid fa-envelope-open-text"></i> contacto@cbinmobiliaria.com</a>
+                    <p class="flex items-center gap-3"><i class="fa-solid fa-clock"></i> Lunes a viernes · 9:00 a 19:00 hrs</p>
+                </div>
+            </div>
+            <form class="glass-card space-y-5 bg-white/95 p-8 text-slate-700 shadow-xl animate-on-scroll">
+                <div>
+                    <label for="name" class="text-sm font-semibold text-slate-600">Nombre completo</label>
+                    <input id="name" type="text" placeholder="¿Cómo te llamas?" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
+                </div>
+                <div class="grid gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="email" class="text-sm font-semibold text-slate-600">Correo</label>
+                        <input id="email" type="email" placeholder="tu@email.com" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
+                    </div>
+                    <div>
+                        <label for="phone" class="text-sm font-semibold text-slate-600">Teléfono</label>
+                        <input id="phone" type="tel" placeholder="(52) 000 000 0000" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                    </div>
+                </div>
+                <div>
+                    <label for="interest" class="text-sm font-semibold text-slate-600">¿Qué estás buscando?</label>
+                    <select id="interest" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100">
+                        <option>Comprar una propiedad</option>
+                        <option>Vender mi propiedad</option>
+                        <option>Rentar un inmueble</option>
+                        <option>Asesoría de inversión</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="message" class="text-sm font-semibold text-slate-600">Cuéntanos detalles</label>
+                    <textarea id="message" rows="4" placeholder="Escríbenos tus ideas, tiempos y expectativas" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100"></textarea>
+                </div>
+                <button type="submit" class="btn-primary w-full justify-center"><i class="fa-solid fa-envelope-circle-check"></i> Enviar mensaje</button>
+                <p class="text-xs text-slate-400">Protegemos tus datos. Solo te contactaremos para asesorarte.</p>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

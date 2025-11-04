@@ -1,46 +1,54 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Bienes raíces - Encuentra tu hogar ideal con nosotros.">
-  <meta name="keywords" content="bienes raíces, propiedades, casas, apartamentos, venta, alquiler">
-  <title>Agregar Propiedad</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-</head>
-<body class="font-roboto bg-gray-100">
-  <header class="bg-blue-600 text-white p-6">
-    <div class="container mx-auto flex justify-between items-center">
-      <h1 class="text-3xl font-bold">Bienes Raíces</h1>
-      <nav>
-        <ul class="flex space-x-4">
-          <li><a class="hover:underline" href="{{ url_for('index') }}">Inicio</a></li>
-          <li><a class="hover:underline" href="{{ url_for('catalogo') }}">Catálogo</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+{% extends 'base.html' %}
+{% block title %}Panel administrativo · Bienes Raíces Boutique{% endblock %}
 
-  <div class="container mx-auto my-8">
-    <h1 class="text-2xl font-bold mb-4">Agregar Nueva Propiedad</h1>
-    <form method="POST" action="{{ url_for('add_property') }}" enctype="multipart/form-data">
-      <input type="text" name="name" placeholder="Nombre de la propiedad" required>
-      <textarea name="description" placeholder="Descripción" required></textarea>
-      <input type="text" name="location" placeholder="Ubicación" required>
-      <input type="number" name="price" placeholder="Precio" step="0.01" required>
-      
-      <!-- Cargar imagen principal -->
-      <label for="main_image">Imagen Principal</label>
-      <input type="file" name="main_image" id="main_image" accept="image/*" required>
-      
-      <!-- Cargar imágenes de repertorio -->
-      <label for="repertory_images">Imágenes de Repertorio</label>
-      <input type="file" name="repertory_images" id="repertory_images" accept="image/*" multiple>
-      
-      <button type="submit">Agregar Propiedad</button>
-  </form>  
-  </div>
-</body>
-</html>
+{% block content %}
+<section class="relative py-16">
+    <div class="mx-auto max-w-6xl px-6">
+        <div class="flex flex-col gap-10 lg:flex-row">
+            <div class="glass-card w-full max-w-sm space-y-6 p-8 text-slate-600 animate-on-scroll">
+                <span class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-1 text-sm font-semibold text-blue-600"><i class="fa-solid fa-gauge-high"></i> Panel profesional</span>
+                <h1 class="text-3xl font-semibold text-slate-900">Gestiona tus propiedades</h1>
+                <p class="text-sm text-slate-500">Carga propiedades, actualiza imágenes y mantén tu catálogo impecable. Recuerda completar todos los campos para lograr una presentación consistente.</p>
+                <ul class="space-y-2 text-sm">
+                    <li><i class="fa-solid fa-circle text-[6px] text-rose-400"></i> Carga imágenes en formato JPG o PNG.</li>
+                    <li><i class="fa-solid fa-circle text-[6px] text-rose-400"></i> Utiliza descripciones claras y concisas.</li>
+                    <li><i class="fa-solid fa-circle text-[6px] text-rose-400"></i> Puedes agregar múltiples imágenes de repertorio.</li>
+                </ul>
+            </div>
+            <div class="flex-1">
+                <form method="POST" action="{{ url_for('add_property') }}" enctype="multipart/form-data" class="glass-card space-y-6 p-8 text-slate-600 animate-on-scroll">
+                    <h2 class="text-2xl font-semibold text-slate-900">Agregar nueva propiedad</h2>
+                    <div class="grid gap-6 md:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-slate-600" for="name">Nombre de la propiedad</label>
+                            <input type="text" id="name" name="name" placeholder="Ej. Residencia Vista Loma" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-600" for="location">Ubicación</label>
+                            <input type="text" id="location" name="location" placeholder="Ciudad, colonia" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-600" for="price">Precio</label>
+                            <input type="number" id="price" name="price" step="0.01" placeholder="Ej. 3500000" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-600" for="main_image">Imagen principal</label>
+                            <input type="file" id="main_image" name="main_image" accept="image/*" required class="mt-2 w-full cursor-pointer rounded-2xl border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-sm text-slate-500 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-600" for="description">Descripción</label>
+                        <textarea id="description" name="description" rows="4" placeholder="Describe los puntos fuertes de la propiedad" required class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-sm font-semibold text-slate-600" for="repertory_images">Imágenes de repertorio</label>
+                        <input type="file" id="repertory_images" name="repertory_images" accept="image/*" multiple class="mt-2 w-full cursor-pointer rounded-2xl border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-sm text-slate-500 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" />
+                        <p class="mt-2 text-xs text-slate-400">Puedes seleccionar varias imágenes a la vez. Se mostrarán en la galería complementaria.</p>
+                    </div>
+                    <button type="submit" class="btn-primary w-full justify-center"><i class="fa-solid fa-cloud-arrow-up"></i> Guardar propiedad</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,56 +1,66 @@
-<html lang="es">
-<head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Iniciar Sesión</title>
-    <link href="https://cdn.tailwindcss.com" rel="stylesheet"/>
-    <script>
-        // Mostrar tiempo restante dinámicamente
-        function updateTimeRemaining() {
-            var remainingTime = parseInt('{{ remaining_time if remaining_time else 0 }}');
-            if (remainingTime > 0) {
-                document.getElementById('time_remaining').innerText = remainingTime + ' segundos';
-                setTimeout(function() {
-                    updateTimeRemaining();
-                }, 1000);
-            }
-        }
-        window.onload = updateTimeRemaining;
-    </script>    
-</head>
-<body>
-    <div class="max-w-md mx-auto mt-8 p-6 bg-white shadow rounded">
-        <a class="hover:underline" href="{{ url_for('index') }}">Inicio</a>
-        <li><a class="hover:underline" href="/catalogo">Catalogo</a></li>
-        <h2 class="text-2xl font-bold mb-4">Iniciar Sesión</h2>
-        
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <ul class="mb-4">
-                    {% for message in messages %}
-                        <li class="text-red-500">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-        
-        <form action="/login" method="POST">
-            <div class="mb-4">
-                <label for="username" class="block text-gray-700">Usuario</label>
-                <input type="text" id="username" name="username" class="w-full p-2 border border-gray-300 rounded mt-2" value="{{ username or '' }}" required />
-            </div>
-            <div class="mb-4">
-                <label for="password" class="block text-gray-700">Contraseña</label>
-                <input type="password" id="password" name="password" class="w-full p-2 border border-gray-300 rounded mt-2" required />
-            </div>
-            <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded w-full">Iniciar Sesión</button>
-        </form>
+{% extends 'base.html' %}
+{% block title %}Iniciar sesión · Bienes Raíces Boutique{% endblock %}
 
-        {% if lock_time %}
-        <div class="mt-4 text-red-500">
-            <p>Usuario bloqueado. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span></p>
+{% block content %}
+<section class="relative py-20">
+    <div class="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 md:flex-row md:items-stretch">
+        <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
+            <h1 class="text-3xl font-semibold text-slate-900">Bienvenido de vuelta</h1>
+            <p class="text-sm text-slate-500">Accede al panel administrativo para gestionar propiedades, actualizar información y ofrecer la mejor experiencia a tus clientes.</p>
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
+                <div>
+                    <label for="username" class="text-sm font-semibold text-slate-600">Usuario</label>
+                    <input type="text" id="username" name="username" value="{{ username or '' }}" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
+                </div>
+                <div>
+                    <label for="password" class="text-sm font-semibold text-slate-600">Contraseña</label>
+                    <input type="password" id="password" name="password" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
+                </div>
+                <button type="submit" class="btn-primary w-full justify-center"><i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión</button>
+            </form>
+            {% if lock_time %}
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                    Usuario bloqueado. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span>.
+                </div>
+            {% elif remaining_time %}
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                    Usuario bloqueado temporalmente. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span> segundos.
+                </div>
+            {% endif %}
+            <div class="text-sm text-slate-500">
+                ¿Olvidaste tu contraseña? Escríbenos a <a class="font-semibold text-rose-500 hover:underline" href="mailto:contacto@cbinmobiliaria.com">contacto@cbinmobiliaria.com</a> para ayudarte.</div>
         </div>
-        {% endif %}
+        <div class="glass-card hidden h-full max-w-md flex-1 flex-col justify-between bg-gradient-to-br from-rose-500 via-rose-400 to-amber-400 p-8 text-white shadow-2xl md:flex animate-on-scroll">
+            <div class="space-y-6">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-semibold">Panel exclusivo</span>
+                <h2 class="text-3xl font-semibold">Gestiona tu portafolio con estilo</h2>
+                <p class="text-sm text-white/80">Sube nuevas propiedades, actualiza precios y controla el contenido del catálogo desde una interfaz moderna y amigable.</p>
+            </div>
+            <div class="space-y-3 text-sm text-white/80">
+                <p><i class="fa-solid fa-shield-halved"></i> Autenticación segura</p>
+                <p><i class="fa-solid fa-chart-column"></i> Indicadores claros</p>
+                <p><i class="fa-solid fa-bolt"></i> Carga rápida de imágenes</p>
+            </div>
+        </div>
     </div>
-</body>
-</html>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const timeElement = document.getElementById('time_remaining');
+    let remaining = parseInt('{{ remaining_time if remaining_time else 0 }}', 10);
+
+    if (timeElement && remaining > 0) {
+        const interval = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(interval);
+                timeElement.textContent = '0 segundos';
+            } else {
+                timeElement.textContent = `${remaining} segundos`;
+            }
+        }, 1000);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Bienes raíces - Encuentra tu hogar ideal con nosotros." />
+    <meta name="keywords" content="bienes raíces, propiedades, casas, apartamentos, venta, alquiler" />
+    <title>{% block title %}Bienes Raíces{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #ec4899;
+            --primary-dark: #be123c;
+            --accent-color: #38bdf8;
+            --deep-night: #0f172a;
+        }
+
+        body {
+            font-family: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(240, 249, 255, 0.9) 45%, rgba(250, 245, 255, 0.9) 100%);
+            color: #0f172a;
+            min-height: 100vh;
+        }
+
+        .nav-link {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            color: rgba(15, 23, 42, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            inset-inline: 16px;
+            bottom: 8px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 999px;
+            opacity: 0;
+            transform: scaleX(0.4);
+            transition: all 0.35s ease;
+        }
+
+        .nav-link:hover,
+        .nav-link:focus {
+            color: var(--primary-dark);
+            background-color: rgba(236, 72, 153, 0.08);
+        }
+
+        .nav-link:hover::after,
+        .nav-link.is-active::after {
+            opacity: 1;
+            transform: scaleX(1);
+        }
+
+        .nav-link.is-active {
+            color: var(--primary-dark);
+            background-color: rgba(236, 72, 153, 0.12);
+            box-shadow: 0 10px 30px rgba(236, 72, 153, 0.15);
+        }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.9rem 1.6rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: #fff;
+            box-shadow: 0 18px 35px rgba(236, 72, 153, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 22px 45px rgba(190, 18, 60, 0.35);
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.9rem 1.6rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            background-color: rgba(56, 189, 248, 0.15);
+            transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            background-color: rgba(56, 189, 248, 0.25);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(241, 245, 249, 0.75));
+            border-radius: 24px;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            backdrop-filter: blur(16px);
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            letter-spacing: -0.02em;
+            color: var(--deep-night);
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .floating-bubble {
+            position: absolute;
+            border-radius: 9999px;
+            opacity: 0.35;
+            filter: blur(0px);
+            animation: float 12s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px) scale(1);
+            }
+            50% {
+                transform: translateY(-25px) scale(1.05);
+            }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="antialiased">
+    <div class="relative min-h-screen overflow-hidden">
+        <div class="floating-bubble -top-48 -right-40 h-80 w-80 bg-gradient-to-br from-rose-200 via-rose-100 to-transparent"></div>
+        <div class="floating-bubble top-1/3 -left-32 h-96 w-96 bg-gradient-to-br from-blue-200 via-sky-100 to-transparent" style="animation-delay: 4s;"></div>
+        <div class="floating-bubble bottom-0 right-1/3 h-72 w-72 bg-gradient-to-br from-emerald-200 via-teal-100 to-transparent" style="animation-delay: 8s;"></div>
+
+        <header class="relative z-20 border-b border-white/40 bg-white/80 backdrop-blur-xl">
+            <div class="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+                <a href="{{ url_for('index') }}" class="group flex items-center gap-3">
+                    <img src="{{ url_for('static', filename='images/CARINA_BECERRA-removebg-preview.png') }}" alt="Logo Bienes Raíces" class="h-12 w-12 rounded-full object-contain shadow-lg transition-transform duration-500 group-hover:scale-110" />
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-slate-400">Carina Becerra</p>
+                        <p class="text-xl font-semibold text-slate-900">Bienes Raíces Boutique</p>
+                    </div>
+                </a>
+
+                <div class="flex items-center gap-4">
+                    <button id="menu-toggle" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-all duration-300 hover:border-rose-300 hover:text-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200 md:hidden" aria-label="Abrir menú de navegación">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                    <nav id="primary-navigation" class="absolute right-6 top-[76px] hidden w-64 rounded-3xl border border-white/40 bg-white/90 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300 md:static md:block md:w-auto md:rounded-full md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+                        <ul class="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                            {% set endpoint = request.endpoint %}
+                            <li><a class="nav-link {{ 'is-active' if endpoint in ['index'] else '' }}" href="{{ url_for('index') }}"><i class="fa-solid fa-house"></i> Inicio</a></li>
+                            <li><a class="nav-link {{ 'is-active' if endpoint in ['catalogo', 'property_detail'] else '' }}" href="{{ url_for('catalogo') }}"><i class="fa-solid fa-building"></i> Catálogo</a></li>
+                            {% if session.get('logged_in') %}
+                                <li><a class="nav-link {{ 'is-active' if endpoint in ['admin', 'add_property', 'edit_property'] else '' }}" href="{{ url_for('admin') }}"><i class="fa-solid fa-gauge-high"></i> Admin</a></li>
+                                <li><a class="nav-link" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</a></li>
+                            {% else %}
+                                <li><a class="nav-link {{ 'is-active' if endpoint == 'login' else '' }}" href="{{ url_for('login') }}"><i class="fa-solid fa-user"></i> Iniciar Sesión</a></li>
+                            {% endif %}
+                            <li class="md:ml-2"><a class="btn-secondary" href="{{ url_for('index') }}#contacto"><i class="fa-solid fa-calendar-check"></i> Agenda una visita</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="relative z-10 mx-auto mt-6 max-w-3xl px-6">
+                    <div class="space-y-3">
+                        {% for message in messages %}
+                            <div class="glass-card border-l-4 border-rose-300 px-6 py-4 text-sm text-slate-700 shadow-lg">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <main class="relative z-10 flex min-h-[calc(100vh-220px)] flex-col">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="relative z-10 mt-20 border-t border-white/40 bg-white/75 py-12 backdrop-blur-xl">
+            <div class="mx-auto flex max-w-7xl flex-col gap-10 px-6 md:flex-row md:items-center md:justify-between">
+                <div class="space-y-3">
+                    <h3 class="text-2xl font-semibold text-slate-900">Conversemos sobre tu próximo hogar</h3>
+                    <p class="max-w-xl text-slate-600">Te acompañamos en cada paso: desde la búsqueda hasta la firma. Nuestro equipo está listo para asesorarte con calidez y profesionalismo.</p>
+                </div>
+                <div class="flex flex-col gap-4 text-slate-600">
+                    <a class="flex items-center gap-3 transition-colors hover:text-rose-500" href="tel:+521234567890"><i class="fa-solid fa-phone text-rose-500"></i> +52 123 456 7890</a>
+                    <a class="flex items-center gap-3 transition-colors hover:text-rose-500" href="mailto:contacto@cbinmobiliaria.com"><i class="fa-solid fa-envelope text-rose-500"></i> contacto@cbinmobiliaria.com</a>
+                    <p class="flex items-center gap-3"><i class="fa-solid fa-location-dot text-rose-500"></i> Monterrey, Nuevo León · México</p>
+                    <div class="flex items-center gap-4 pt-2 text-xl text-slate-500">
+                        <a href="#" class="transition-transform duration-300 hover:-translate-y-1 hover:text-rose-500"><i class="fa-brands fa-facebook"></i></a>
+                        <a href="#" class="transition-transform duration-300 hover:-translate-y-1 hover:text-rose-500"><i class="fa-brands fa-instagram"></i></a>
+                        <a href="#" class="transition-transform duration-300 hover:-translate-y-1 hover:text-rose-500"><i class="fa-brands fa-linkedin"></i></a>
+                    </div>
+                </div>
+            </div>
+            <p class="mt-12 text-center text-sm text-slate-400">© 2024 Carina Becerra Bienes Raíces. Diseño con pasión y detalle.</p>
+        </footer>
+    </div>
+
+    <script>
+        const toggleButton = document.getElementById('menu-toggle');
+        const navigation = document.getElementById('primary-navigation');
+
+        if (toggleButton && navigation) {
+            toggleButton.addEventListener('click', () => {
+                navigation.classList.toggle('hidden');
+            });
+
+            document.querySelectorAll('#primary-navigation a').forEach((link) => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 768) {
+                        navigation.classList.add('hidden');
+                    }
+                });
+            });
+        }
+
+        const animatedElements = document.querySelectorAll('.animate-on-scroll');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.25 });
+
+        animatedElements.forEach(element => observer.observe(element));
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
