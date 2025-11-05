@@ -176,6 +176,18 @@
                             <li><a class="nav-link {{ 'is-active' if endpoint in ['index'] else '' }}" href="{{ url_for('index') }}"><i class="fa-solid fa-house"></i> Inicio</a></li>
                             <li><a class="nav-link {{ 'is-active' if endpoint in ['catalogo', 'property_detail'] else '' }}" href="{{ url_for('catalogo') }}"><i class="fa-solid fa-building"></i> Catálogo</a></li>
                             {% if session.get('logged_in') %}
+                                <li class="hidden md:block">
+                                    {% set display_name = session.get('user_name') or session.get('user_email') %}
+                                    {% set initials = (display_name or 'Usuario')[0]|upper %}
+                                    <div class="flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-sm font-medium text-slate-600 shadow-inner">
+                                        {% if session.get('user_picture') %}
+                                            <img src="{{ session.get('user_picture') }}" alt="Avatar" class="h-8 w-8 rounded-full object-cover" />
+                                        {% else %}
+                                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500 text-xs font-semibold uppercase text-white">{{ initials }}</span>
+                                        {% endif %}
+                                        <span class="truncate max-w-[120px]">{{ display_name }}</span>
+                                    </div>
+                                </li>
                                 <li><a class="nav-link {{ 'is-active' if endpoint in ['admin', 'add_property', 'edit_property'] else '' }}" href="{{ url_for('admin') }}"><i class="fa-solid fa-gauge-high"></i> Admin</a></li>
                                 <li><a class="nav-link" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión</a></li>
                             {% else %}

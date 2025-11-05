@@ -1,13 +1,31 @@
 from flask_sqlalchemy import SQLAlchemy
 
+
 db = SQLAlchemy()
 
+
 class User(db.Model):
+    __tablename__ = 'users'
+
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
-    is_blocked = db.Column(db.Boolean, default=False)  # Bloqueo temporal
-    is_permanently_blocked = db.Column(db.Boolean, default=False)  # Bloqueo permanente
+    provider = db.Column(db.String(50), nullable=False)
+    provider_user_id = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), nullable=False)
+    name = db.Column(db.String(255), nullable=True)
+    picture = db.Column(db.String(512), nullable=True)
+    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        server_default=db.func.now(),
+        onupdate=db.func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('provider', 'provider_user_id', name='uq_users_provider_identity'),
+        db.UniqueConstraint('email', name='uq_users_email'),
+    )
+
 
 class Property(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -15,5 +33,5 @@ class Property(db.Model):
     description = db.Column(db.Text, nullable=False)
     location = db.Column(db.String(200), nullable=False)
     price = db.Column(db.Float, nullable=False)
-    main_image = db.Column(db.Text, nullable=True)  # Imagen principal
-    repertory_images = db.Column(db.Text, nullable=True)  # Imágenes de repertorio (coma separada)
+    main_image = db.Column(db.Text, nullable=True)
+    repertory_images = db.Column(db.Text, nullable=True)

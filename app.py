@@ -1,274 +1,362 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from models import db, User, Property
-from config import Config
 import os
+from typing import Dict
+
+from authlib.integrations.flask_client import OAuth
+from flask import (
+    Flask,
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask_migrate import Migrate
+
+from config import Config
+from models import Property, User, db
 from werkzeug.utils import secure_filename
-import time
-
-app = Flask(__name__)
-app.config.from_object(Config)
-
-# Inicializar la base de datos
-db.init_app(app)
-migrate = Migrate(app, db)
-
-@app.before_request
-def create_tables():
-    db.create_all()  # Crea las tablas si no existen
-
-## Método para verificar si un usuario está bloqueado
-def is_user_blocked(username):
-    user = User.query.filter_by(name=username).first()
-    if user and hasattr(user, 'is_blocked') and user.is_blocked:
-        return True
-    return False
 
 
-# Ruta para el login
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        user = User.query.filter_by(name=username).first()
-        
-        if user:
-            # Revisar si el usuario está permanentemente bloqueado
-            if user.is_permanently_blocked:
-                flash("Tu cuenta está permanentemente bloqueada debido a múltiples intentos fallidos.")
-                return render_template('login.html')
-            
-            # Revisar si el usuario está temporalmente bloqueado
-            if user.is_blocked:
-                lock_time = session.get(f'lock_time_{username}', 0)
-                if lock_time and time.time() - lock_time < 30:
-                    remaining_time = int(30 - (time.time() - lock_time))
-                    flash(f"Usuario bloqueado temporalmente. Intenta nuevamente en {remaining_time} segundos.")
-                    return render_template('login.html', username=username, remaining_time=remaining_time)
-                else:
-                    user.is_blocked = False
-                    db.session.commit()  # Liberar el bloqueo temporal
+def create_app() -> Flask:
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-            # Verificar la contraseña
-            if user.password == password:
-                session['logged_in'] = True
-                session.pop(f'failed_attempts_{username}', None)  # Limpiar los intentos fallidos
-                return redirect(url_for('index'))
-            else:
-                # Obtener los intentos fallidos almacenados en sesión
-                failed_attempts = session.get(f'failed_attempts_{username}', 0)
-                
-                # Si ha fallado los primeros 3 intentos
-                if failed_attempts < 3:
-                    session[f'failed_attempts_{username}'] = failed_attempts + 1
-                    remaining_attempts = 3 - (failed_attempts + 1)
-                    flash(f"Credenciales incorrectas. Intentos restantes: {remaining_attempts}")
-                    return render_template('login.html', username=username)
+    db.init_app(app)
+    Migrate(app, db)
 
-                # Después de los 3 primeros intentos, verificar si tiene intentos adicionales (1 o 2)
-                if failed_attempts == 3:
-                    session[f'lock_time_{username}'] = time.time()  # Registrar el tiempo de bloqueo temporal
-                    user.is_blocked = True
-                    db.session.commit()  # Guardar el cambio en el estado de bloqueo
-                    session[f'failed_attempts_{username}'] = failed_attempts + 1
-                    flash("Has fallado 4 veces. Ahora debes esperar 30 segundos para el siguiente intento.")
-                    return render_template('login.html', username=username)
+    oauth = OAuth(app)
+    providers: Dict[str, Dict[str, str]] = {}
 
-                # Después de los 4 intentos fallidos (3 iniciales + 1 adicional), permitir el último intento
-                if failed_attempts == 4:
-                    session[f'lock_time_{username}'] = time.time()  # Registrar el tiempo de bloqueo temporal
-                    user.is_blocked = True
-                    db.session.commit()  # Guardar el cambio en el estado de bloqueo
-                    session[f'failed_attempts_{username}'] = failed_attempts + 1
-                    flash("Has fallado 5 veces. Ahora debes esperar 30 segundos para el siguiente intento.")
-                    return render_template('login.html', username=username)
-
-                # Si el usuario falló el último intento (5 intentos en total)
-                if failed_attempts >= 5:
-                    user.is_permanently_blocked = True  # Bloquear permanentemente al usuario
-                    db.session.commit()  # Guardar los cambios en la base de datos
-                    flash("Has fallado todos los intentos. Tu cuenta está bloqueada permanentemente.")
-                    return render_template('login.html')
-
-        # Si el usuario no existe
-        flash("Usuario no encontrado.")
-        return render_template('login.html')
-
-    return render_template('login.html')
-
-# Ruta para el panel de administración, solo accesible si el usuario está logueado
-@app.route('/adminis')
-def admin():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    return render_template('adminis.html')
-
-@app.route('/add_property', methods=['GET', 'POST'])
-def add_property():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        location = request.form['location']
-        price = float(request.form['price'])
-        
-        # Manejar la imagen principal
-        main_image_file = request.files.get('main_image')
-        if main_image_file and main_image_file.filename != '':  # Verificar que se haya seleccionado un archivo
-            main_filename = secure_filename(main_image_file.filename)
-            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                os.makedirs(app.config['UPLOAD_FOLDER'])
-            main_image_file.save(main_image_path)
-            main_image_url = f'static/images/imagesProperty/{main_filename}'
-        else:
-            main_image_url = None
-        
-        # Manejar las imágenes de repertorio (ahora es opcional)
-        repertory_files = request.files.getlist('repertory_images')
-        repertory_urls = []
-        if repertory_files:  # Solo procesar si se suben imágenes
-            for file in repertory_files:
-                if file.filename != '':  # Verificar que se haya seleccionado un archivo
-                    filename = secure_filename(file.filename)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                        os.makedirs(app.config['UPLOAD_FOLDER'])
-                    file.save(file_path)
-                    repertory_urls.append(f'static/images/imagesProperty/{filename}')
-        
-        repertory_images = ",".join(repertory_urls)  # Convertir la lista a una cadena separada por comas
-        
-        # Crear la nueva propiedad
-        new_property = Property(
-            name=name,
-            description=description,
-            location=location,
-            price=price,
-            main_image=main_image_url,
-            repertory_images=repertory_images if repertory_images else None  # Si no hay imágenes, se guarda None
+    google_client_id = app.config.get('GOOGLE_CLIENT_ID')
+    google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
+    if google_client_id and google_client_secret:
+        oauth.register(
+            name='google',
+            client_id=google_client_id,
+            client_secret=google_client_secret,
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={'scope': 'openid email profile', 'prompt': 'select_account'},
         )
-        
-        db.session.add(new_property)
-        db.session.commit()
-        
-        return redirect(url_for('admin'))
-    
-    return render_template('adminis.html')
+        providers['google'] = {
+            'label': 'Continuar con Google',
+            'icon': 'fa-brands fa-google',
+            'class': 'bg-white text-slate-700 hover:bg-slate-50',
+        }
 
-@app.route('/edit_property/<int:property_id>', methods=['GET', 'POST'])
-def edit_property(property_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    property = Property.query.get_or_404(property_id)
-    
-    if request.method == 'POST':
-        # Obtener los nuevos datos
-        name = request.form['name']
-        description = request.form['description']
-        location = request.form['location']
-        price = float(request.form['price'])
-        
-        # Manejar la imagen principal
-        main_image_file = request.files.get('main_image')
-        if main_image_file and main_image_file.filename:
-            main_filename = secure_filename(main_image_file.filename)
-            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
-            main_image_file.save(main_image_path)
-            main_image_url = f'static/images/imagesProperty/{main_filename}'
+    apple_client_id = app.config.get('APPLE_CLIENT_ID')
+    apple_client_secret = app.config.get('APPLE_CLIENT_SECRET')
+    if apple_client_id and apple_client_secret:
+        oauth.register(
+            name='apple',
+            client_id=apple_client_id,
+            client_secret=apple_client_secret,
+            server_metadata_url='https://appleid.apple.com/.well-known/openid-configuration',
+            client_kwargs={
+                'scope': 'name email',
+                'response_mode': 'form_post',
+                'response_type': 'code id_token',
+            },
+        )
+        providers['apple'] = {
+            'label': 'Continuar con Apple',
+            'icon': 'fa-brands fa-apple',
+            'class': 'bg-black text-white hover:bg-slate-800',
+        }
+
+    app.oauth = oauth
+    app.config['ENABLED_OAUTH_PROVIDERS'] = providers
+
+    @app.before_request
+    def create_tables() -> None:
+        db.create_all()
+
+    def get_oauth_client(provider: str):
+        client = app.oauth.create_client(provider)
+        if not client:
+            abort(404)
+        return client
+
+    @app.route('/login')
+    def login():
+        providers_meta = app.config.get('ENABLED_OAUTH_PROVIDERS', {})
+        if not providers_meta:
+            flash(
+                'El inicio de sesión con terceros no está configurado. '
+                'Asegúrate de definir las claves de Google o Apple en las variables de entorno.'
+            )
+        return render_template('login.html', oauth_providers=providers_meta)
+
+    @app.route('/login/<provider>')
+    def oauth_login(provider: str):
+        client = get_oauth_client(provider)
+        redirect_uri = url_for('oauth_callback', provider=provider, _external=True)
+        nonce = os.urandom(16).hex()
+        session['oauth_nonce'] = nonce
+        if provider == 'apple':
+            return client.authorize_redirect(redirect_uri, response_mode='form_post', nonce=nonce)
+        return client.authorize_redirect(redirect_uri, nonce=nonce)
+
+    @app.route('/auth/<provider>', methods=['GET', 'POST'])
+    def oauth_callback(provider: str):
+        client = get_oauth_client(provider)
+        token = client.authorize_access_token()
+        user_info = None
+
+        nonce = session.pop('oauth_nonce', None)
+
+        try:
+            if provider == 'google':
+                user_info = client.parse_id_token(token, nonce=nonce)
+                if not user_info:
+                    response = client.get('userinfo')
+                    user_info = response.json() if response else None
+            elif provider == 'apple':
+                user_info = client.parse_id_token(token, nonce=nonce)
+            else:
+                user_info = client.parse_id_token(token, nonce=nonce)
+        except Exception as exc:  # pragma: no cover - depends on provider response
+            current_app.logger.exception('OAuth callback error for %s', provider, exc_info=exc)
+            flash('Ocurrió un error al validar la respuesta de autenticación.')
+            return redirect(url_for('login'))
+
+        if not user_info:
+            flash('No se pudo obtener la información del usuario. Intenta nuevamente.')
+            return redirect(url_for('login'))
+
+        provider_user_id = str(user_info.get('sub') or user_info.get('id'))
+        email = user_info.get('email')
+        raw_name = user_info.get('name')
+        if isinstance(raw_name, dict):
+            name = ' '.join(
+                part
+                for part in [raw_name.get('firstName'), raw_name.get('lastName')]
+                if part
+            ).strip()
         else:
-            main_image_url = property.main_image  # Mantener la imagen original si no se sube una nueva
+            name = raw_name
 
-        # Para agregar nuevas imágenes sin eliminar las anteriores
-        repertory_files = request.files.getlist('repertory_images')
-        repertory_urls = []
-        if repertory_files:  # Solo procesar si se suben imágenes
-            for file in repertory_files:
-                if file.filename:  # Verificar si el archivo tiene un nombre (es decir, si se seleccionó un archivo)
-                    filename = secure_filename(file.filename)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(file_path)
-                    repertory_urls.append(f'static/images/imagesProperty/{filename}')
+        if not name:
+            name = (
+                user_info.get('given_name')
+                or user_info.get('fullName')
+                or user_info.get('preferred_username')
+            )
+        picture = user_info.get('picture')
 
-        # Si ya existen imágenes de repertorio, agregamos las nuevas al final
-        if property.repertory_images:
-            repertory_urls = property.repertory_images.split(',') + repertory_urls
+        if not provider_user_id or not email:
+            flash('El proveedor no envió datos suficientes para crear la cuenta.')
+            return redirect(url_for('login'))
 
-        # Guardar los cambios en la propiedad
-        property.name = name
-        property.description = description
-        property.location = location
-        property.price = price
-        property.main_image = main_image_url
-        property.repertory_images = ",".join(repertory_urls)  # Convertir lista en string separado por comas
+        user = User.query.filter_by(provider=provider, provider_user_id=provider_user_id).first()
+
+        if not user and email:
+            user = User.query.filter_by(email=email.lower()).first()
+            if user:
+                user.provider = provider
+                user.provider_user_id = provider_user_id
+
+        if not user:
+            user = User(
+                provider=provider,
+                provider_user_id=provider_user_id,
+                email=email.lower(),
+                name=name,
+                picture=picture,
+            )
+            db.session.add(user)
+        else:
+            user.email = email.lower()
+            if name:
+                user.name = name
+            if picture:
+                user.picture = picture
 
         db.session.commit()
-        return redirect(url_for('property_detail', property_id=property.id))
-    
-    return render_template('editProperty.html', property=property)
-    
-# Ruta para cerrar sesión
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)  # Eliminar la sesión
-    return redirect(url_for('index'))
 
-@app.route('/')
-def index():
-    featured_properties = Property.query.order_by(Property.id.desc()).limit(3).all()
-    return render_template('index.html', featured_properties=featured_properties)
+        session['logged_in'] = True
+        session['user_id'] = user.id
+        session['user_name'] = user.name or user.email
+        session['user_email'] = user.email
+        session['user_picture'] = user.picture
 
-@app.route('/catalogo')
-def catalogo():
-    properties = Property.query.all()  # Obtener todas las propiedades
-    return render_template('catalogo.html', properties=properties)
+        flash('Inicio de sesión exitoso.')
+        return redirect(url_for('index'))
 
-@app.route('/property/<int:property_id>')
-def property_detail(property_id):
-    # Obtener la propiedad específica por ID
-    property = Property.query.get_or_404(property_id)
-    return render_template('propertyDetail.html', property=property)
+    @app.route('/logout')
+    def logout():
+        session_keys = [
+            'logged_in',
+            'user_id',
+            'user_name',
+            'user_email',
+            'user_picture',
+        ]
+        for key in session_keys:
+            session.pop(key, None)
+        flash('Sesión cerrada correctamente.')
+        return redirect(url_for('index'))
 
-@app.route('/delete_property/<int:property_id>', methods=['POST'])
-def delete_property(property_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    property_to_delete = Property.query.get_or_404(property_id)
-    db.session.delete(property_to_delete)
-    db.session.commit()
-    return redirect(url_for('catalogo'))
+    @app.route('/adminis')
+    def admin():
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return render_template('adminis.html')
 
-@app.route('/remove_repertory_image', methods=['POST'])
-def remove_repertory_image():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    data = request.get_json()
-    image_to_remove = data.get('image')
+    @app.route('/add_property', methods=['GET', 'POST'])
+    def add_property():
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
 
-    if image_to_remove:
-        # Eliminar la imagen del sistema de archivos
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_to_remove.split('/')[-1])
-        if os.path.exists(image_path):
-            os.remove(image_path)
-        
-        # Eliminar la imagen de repertorio en la base de datos
-        property = Property.query.filter(Property.repertory_images.like(f'%{image_to_remove}%')).first()
-        if property:
-            images = property.repertory_images.split(',')
-            images = [img for img in images if img != image_to_remove]
-            property.repertory_images = ','.join(images)
+        if request.method == 'POST':
+            name = request.form['name']
+            description = request.form['description']
+            location = request.form['location']
+            price = float(request.form['price'])
+
+            main_image_file = request.files.get('main_image')
+            if main_image_file and main_image_file.filename != '':
+                main_filename = secure_filename(main_image_file.filename)
+                main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
+                if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                    os.makedirs(app.config['UPLOAD_FOLDER'])
+                main_image_file.save(main_image_path)
+                main_image_url = f'static/images/imagesProperty/{main_filename}'
+            else:
+                main_image_url = None
+
+            repertory_files = request.files.getlist('repertory_images')
+            repertory_urls = []
+            if repertory_files:
+                for file in repertory_files:
+                    if file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                            os.makedirs(app.config['UPLOAD_FOLDER'])
+                        file.save(file_path)
+                        repertory_urls.append(f'static/images/imagesProperty/{filename}')
+
+            repertory_images = ','.join(repertory_urls)
+
+            new_property = Property(
+                name=name,
+                description=description,
+                location=location,
+                price=price,
+                main_image=main_image_url,
+                repertory_images=repertory_images if repertory_images else None,
+            )
+
+            db.session.add(new_property)
             db.session.commit()
-            return {'success': True}
-    
-    return {'success': False}
+
+            return redirect(url_for('admin'))
+
+        return render_template('adminis.html')
+
+    @app.route('/edit_property/<int:property_id>', methods=['GET', 'POST'])
+    def edit_property(property_id):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+        property = Property.query.get_or_404(property_id)
+
+        if request.method == 'POST':
+            name = request.form['name']
+            description = request.form['description']
+            location = request.form['location']
+            price = float(request.form['price'])
+
+            main_image_file = request.files.get('main_image')
+            if main_image_file and main_image_file.filename:
+                main_filename = secure_filename(main_image_file.filename)
+                main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
+                main_image_file.save(main_image_path)
+                main_image_url = f'static/images/imagesProperty/{main_filename}'
+            else:
+                main_image_url = property.main_image
+
+            repertory_files = request.files.getlist('repertory_images')
+            repertory_urls = []
+            if repertory_files:
+                for file in repertory_files:
+                    if file.filename:
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        repertory_urls.append(f'static/images/imagesProperty/{filename}')
+
+            if property.repertory_images:
+                repertory_urls = property.repertory_images.split(',') + repertory_urls
+
+            property.name = name
+            property.description = description
+            property.location = location
+            property.price = price
+            property.main_image = main_image_url
+            property.repertory_images = ','.join(repertory_urls)
+
+            db.session.commit()
+            return redirect(url_for('property_detail', property_id=property.id))
+
+        return render_template('editProperty.html', property=property)
+
+    @app.route('/')
+    def index():
+        featured_properties = Property.query.order_by(Property.id.desc()).limit(3).all()
+        return render_template('index.html', featured_properties=featured_properties)
+
+    @app.route('/catalogo')
+    def catalogo():
+        properties = Property.query.all()
+        return render_template('catalogo.html', properties=properties)
+
+    @app.route('/property/<int:property_id>')
+    def property_detail(property_id):
+        property = Property.query.get_or_404(property_id)
+        return render_template('propertyDetail.html', property=property)
+
+    @app.route('/delete_property/<int:property_id>', methods=['POST'])
+    def delete_property(property_id):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+        property_to_delete = Property.query.get_or_404(property_id)
+        db.session.delete(property_to_delete)
+        db.session.commit()
+        return redirect(url_for('catalogo'))
+
+    @app.route('/remove_repertory_image', methods=['POST'])
+    def remove_repertory_image():
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+        data = request.get_json()
+        image_to_remove = data.get('image')
+
+        if image_to_remove:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_to_remove.split('/')[-1])
+            if os.path.exists(image_path):
+                os.remove(image_path)
+
+            property = Property.query.filter(Property.repertory_images.like(f'%{image_to_remove}%')).first()
+            if property:
+                images = property.repertory_images.split(',')
+                images = [img for img in images if img != image_to_remove]
+                property.repertory_images = ','.join(images)
+                db.session.commit()
+                return {'success': True}
+
+        return {'success': False}
+
+    return app
+
+
+app = create_app()
+
 
 if __name__ == '__main__':
     app.run(debug=True)
