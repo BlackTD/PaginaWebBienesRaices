@@ -6,29 +6,27 @@
     <div class="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 md:flex-row md:items-stretch">
         <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
             <h1 class="text-3xl font-semibold text-slate-900">Bienvenido de vuelta</h1>
-            <p class="text-sm text-slate-500">Accede al panel administrativo para gestionar propiedades, actualizar información y ofrecer la mejor experiencia a tus clientes.</p>
-            <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
-                <div>
-                    <label for="username" class="text-sm font-semibold text-slate-600">Usuario</label>
-                    <input type="text" id="username" name="username" value="{{ username or '' }}" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
-                </div>
-                <div>
-                    <label for="password" class="text-sm font-semibold text-slate-600">Contraseña</label>
-                    <input type="password" id="password" name="password" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
-                </div>
-                <button type="submit" class="btn-primary w-full justify-center"><i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión</button>
-            </form>
-            {% if lock_time %}
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                    Usuario bloqueado. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span>.
-                </div>
-            {% elif remaining_time %}
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                    Usuario bloqueado temporalmente. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span> segundos.
-                </div>
-            {% endif %}
-            <div class="text-sm text-slate-500">
-                ¿Olvidaste tu contraseña? Escríbenos a <a class="font-semibold text-rose-500 hover:underline" href="mailto:contacto@cbinmobiliaria.com">contacto@cbinmobiliaria.com</a> para ayudarte.</div>
+            <p class="text-sm text-slate-500">
+                Accede al panel administrativo utilizando tus credenciales de confianza.
+                Inicia sesión con tu cuenta de Google, Apple u otro proveedor habilitado.
+            </p>
+            <div class="space-y-4">
+                {% if oauth_providers %}
+                    {% for provider, meta in oauth_providers.items() %}
+                        <a href="{{ url_for('oauth_login', provider=provider) }}"
+                           class="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold transition-all duration-200 {{ meta.class }}">
+                            <i class="{{ meta.icon }} text-lg"></i> {{ meta.label }}
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                        Aún no hay proveedores de autenticación configurados. Configura las claves de cliente y vuelve a intentar.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="text-xs text-slate-400">
+                Al continuar, aceptas el tratamiento de tus datos únicamente para gestionar el acceso administrativo.
+            </div>
         </div>
         <div class="glass-card hidden h-full max-w-md flex-1 flex-col justify-between bg-gradient-to-br from-rose-500 via-rose-400 to-amber-400 p-8 text-white shadow-2xl md:flex animate-on-scroll">
             <div class="space-y-6">
@@ -44,23 +42,4 @@
         </div>
     </div>
 </section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    const timeElement = document.getElementById('time_remaining');
-    let remaining = parseInt('{{ remaining_time if remaining_time else 0 }}', 10);
-
-    if (timeElement && remaining > 0) {
-        const interval = setInterval(() => {
-            remaining -= 1;
-            if (remaining <= 0) {
-                clearInterval(interval);
-                timeElement.textContent = '0 segundos';
-            } else {
-                timeElement.textContent = `${remaining} segundos`;
-            }
-        }, 1000);
-    }
-</script>
 {% endblock %}
