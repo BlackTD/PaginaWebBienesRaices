@@ -16,7 +16,7 @@
     <div class="auth-card glass-card p-10">
         <h1 class="mb-6 text-3xl font-semibold text-slate-900">Crear cuenta</h1>
         <p class="mb-8 text-slate-600">
-            Regístrate para administrar tus propiedades. Te enviaremos un enlace para confirmar tu correo electrónico.
+            Regístrate para administrar tus propiedades. Configura una contraseña y confirma tu correo electrónico para activar la cuenta.
         </p>
         <form method="post" class="space-y-6">
             <div>
@@ -40,6 +40,32 @@
                     required
                     class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
                     placeholder="nombre@ejemplo.com"
+                />
+            </div>
+            <div>
+                <label for="password" class="mb-2 block text-sm font-medium text-slate-600">Contraseña</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    minlength="8"
+                    autocomplete="new-password"
+                    class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    placeholder="Mínimo 8 caracteres"
+                />
+            </div>
+            <div>
+                <label for="confirm_password" class="mb-2 block text-sm font-medium text-slate-600">Confirmar contraseña</label>
+                <input
+                    type="password"
+                    id="confirm_password"
+                    name="confirm_password"
+                    required
+                    minlength="8"
+                    autocomplete="new-password"
+                    class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    placeholder="Repite tu contraseña"
                 />
             </div>
             <button type="submit" class="btn-primary w-full justify-center">

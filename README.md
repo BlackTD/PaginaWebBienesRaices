@@ -18,10 +18,23 @@ export GOOGLE_CLIENT_SECRET="tu-clave-secreta"
 # Opcional: solo si configuras Sign in with Apple
 export APPLE_CLIENT_ID="com.tuempresa.app"
 export APPLE_CLIENT_SECRET="clave-JWT-generada"
+# Configuración SMTP para los correos de confirmación
+export MAIL_SERVER="smtp.tudominio.com"
+export MAIL_PORT=587
+export MAIL_USERNAME="no-reply@tudominio.com"
+export MAIL_PASSWORD="clave-del-correo"
+export MAIL_USE_TLS=true
 ```
 
 > **Nota:** Para Apple es necesario generar un `client_secret` firmado (JWT) desde el portal de desarrolladores de Apple.
 > Puedes automatizar su creación y actualizar la variable de entorno periódicamente.
+
+### Confirmación de correo electrónico
+
+- Los administradores pueden registrarse con correo y contraseña desde `/register`.
+- Se envía un enlace de verificación que expira a las 48 horas; hasta entonces el acceso estará bloqueado.
+- Al confirmar el correo, la cuenta se activa y se inicia sesión de forma automática.
+- El inicio de sesión en `/login` permite usar tanto credenciales locales como proveedores OAuth configurados.
 
 ### Ejecución local
 

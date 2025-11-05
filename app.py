@@ -22,6 +22,7 @@ from flask_migrate import Migrate
 from config import Config
 from models import Property, User, db
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 _authlib_spec = importlib.util.find_spec('authlib.integrations.flask_client')
@@ -94,9 +95,46 @@ def create_app() -> Flask:
             abort(404)
         return client
 
-    @app.route('/login')
+    @app.route('/login', methods=['GET', 'POST'])
     def login():
         providers_meta = app.config.get('ENABLED_OAUTH_PROVIDERS', {})
+        email_value = ''
+
+        if session.get('logged_in'):
+            flash('Ya tienes una sesión activa.')
+            return redirect(url_for('admin'))
+
+        if request.method == 'POST':
+            email_value = (request.form.get('email') or '').strip().lower()
+            password = request.form.get('password') or ''
+
+            if not email_value or not password:
+                flash('Debes ingresar tu correo electrónico y contraseña.')
+                return render_template('login.html', oauth_providers=providers_meta, email=email_value)
+
+            user = User.query.filter_by(email=email_value).first()
+
+            if not user or user.provider != 'email' or not user.password_hash:
+                flash('Las credenciales proporcionadas no son válidas.')
+                return render_template('login.html', oauth_providers=providers_meta, email=email_value)
+
+            if not user.email_confirmed:
+                flash('Debes confirmar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada.')
+                return render_template('login.html', oauth_providers=providers_meta, email=email_value)
+
+            if not check_password_hash(user.password_hash, password):
+                flash('Las credenciales proporcionadas no son válidas.')
+                return render_template('login.html', oauth_providers=providers_meta, email=email_value)
+
+            session['logged_in'] = True
+            session['user_id'] = user.id
+            session['user_name'] = user.name or user.email
+            session['user_email'] = user.email
+            session['user_picture'] = user.picture
+
+            flash('Inicio de sesión exitoso.')
+            return redirect(url_for('index'))
+
         if not app.oauth:
             flash(
                 'El inicio de sesión con terceros no está disponible en este entorno. '
@@ -107,7 +145,7 @@ def create_app() -> Flask:
                 'El inicio de sesión con terceros no está configurado. '
                 'Asegúrate de definir las claves de Google o Apple en las variables de entorno.'
             )
-        return render_template('login.html', oauth_providers=providers_meta)
+        return render_template('login.html', oauth_providers=providers_meta, email=email_value)
 
     @app.route('/login/<provider>')
     def oauth_login(provider: str):
@@ -383,19 +421,39 @@ def create_app() -> Flask:
 
     @app.route('/register', methods=['GET', 'POST'])
     def register():
+        if session.get('logged_in'):
+            flash('Ya tienes una sesión activa.')
+            return redirect(url_for('admin'))
+
         if request.method == 'POST':
             email = (request.form.get('email') or '').strip().lower()
             name = (request.form.get('name') or '').strip() or None
+            password = request.form.get('password') or ''
+            confirm_password = request.form.get('confirm_password') or ''
 
             if not email:
                 flash('El correo electrónico es obligatorio.')
                 return render_template('register.html', name=name, email=email)
 
+            if len(password) < 8:
+                flash('La contraseña debe tener al menos 8 caracteres.')
+                return render_template('register.html', name=name, email=email)
+
+            if password != confirm_password:
+                flash('Las contraseñas no coinciden.')
+                return render_template('register.html', name=name, email=email)
+
             user = User.query.filter_by(email=email).first()
 
-            if user and user.email_confirmed:
-                flash('Este correo ya ha sido confirmado. Inicia sesión para continuar.')
+            if user and user.provider != 'email':
+                flash('Este correo está asociado a un proveedor externo. Inicia sesión utilizando ese método.')
                 return redirect(url_for('login'))
+
+            if user and user.email_confirmed:
+                flash('Este correo ya fue confirmado. Inicia sesión para continuar.')
+                return redirect(url_for('login'))
+
+            password_hash = generate_password_hash(password)
 
             if not user:
                 user = User(
@@ -404,6 +462,7 @@ def create_app() -> Flask:
                     email=email,
                     name=name,
                     email_confirmed=False,
+                    password_hash=password_hash,
                 )
                 db.session.add(user)
             else:
@@ -412,12 +471,11 @@ def create_app() -> Flask:
                 if name:
                     user.name = name
                 user.email_confirmed = False
+                user.password_hash = password_hash
 
             token = secrets.token_urlsafe(32)
             user.confirmation_token = token
             user.confirmation_sent_at = datetime.utcnow()
-
-            db.session.commit()
 
             confirm_url = url_for('confirm_email', token=token, _external=True)
             msg = Message('Confirma tu correo electrónico', recipients=[email])
@@ -429,8 +487,11 @@ def create_app() -> Flask:
             )
 
             try:
+                db.session.flush()
                 mail.send(msg)
+                db.session.commit()
             except Exception as exc:  # pragma: no cover - depende de configuración externa
+                db.session.rollback()
                 current_app.logger.exception('Error al enviar el correo de confirmación', exc_info=exc)
                 flash('No pudimos enviar el correo de confirmación. Intenta nuevamente más tarde.')
                 return render_template('register.html', name=name, email=email)
@@ -465,8 +526,14 @@ def create_app() -> Flask:
         user.confirmation_sent_at = None
         db.session.commit()
 
-        flash('¡Tu correo ha sido confirmado! Ya puedes iniciar sesión.')
-        return redirect(url_for('login'))
+        session['logged_in'] = True
+        session['user_id'] = user.id
+        session['user_name'] = user.name or user.email
+        session['user_email'] = user.email
+        session['user_picture'] = user.picture
+
+        flash('¡Tu correo ha sido confirmado y tu cuenta está activa!')
+        return redirect(url_for('admin'))
 
     return app
 

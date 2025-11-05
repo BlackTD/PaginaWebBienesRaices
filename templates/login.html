@@ -8,8 +8,44 @@
             <h1 class="text-3xl font-semibold text-slate-900">Bienvenido de vuelta</h1>
             <p class="text-sm text-slate-500">
                 Accede al panel administrativo utilizando tus credenciales de confianza.
-                Inicia sesión con tu cuenta de Google, Apple u otro proveedor habilitado.
+                Puedes iniciar sesión con tu correo y contraseña o con un proveedor externo disponible.
             </p>
+
+            <form method="post" class="space-y-4">
+                <div>
+                    <label for="email" class="mb-2 block text-sm font-medium text-slate-600">Correo electrónico</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value="{{ email or '' }}"
+                        required
+                        autocomplete="email"
+                        class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                        placeholder="nombre@ejemplo.com"
+                    />
+                </div>
+                <div>
+                    <label for="password" class="mb-2 block text-sm font-medium text-slate-600">Contraseña</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        autocomplete="current-password"
+                        class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                        placeholder="Ingresa tu contraseña"
+                    />
+                </div>
+                <button type="submit" class="btn-primary w-full justify-center">
+                    Iniciar sesión
+                </button>
+            </form>
+
+            <div class="relative py-2 text-center text-xs uppercase tracking-[0.3em] text-slate-400">
+                <span class="relative bg-white px-3">o continúa con</span>
+            </div>
+
             <div class="space-y-4">
                 {% if oauth_providers %}
                     {% for provider, meta in oauth_providers.items() %}
@@ -24,6 +60,7 @@
                     </div>
                 {% endif %}
             </div>
+
             <div class="text-xs text-slate-400">
                 Al continuar, aceptas el tratamiento de tus datos únicamente para gestionar el acceso administrativo.
             </div>
