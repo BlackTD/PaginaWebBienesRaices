@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Crear cuenta · Bienes Raíces Boutique{% endblock %}
+
+{% block content %}
+<section class="relative py-20">
+    <div class="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 md:flex-row md:items-stretch">
+        <div class="glass-card hidden h-full max-w-md flex-1 flex-col justify-between bg-gradient-to-br from-emerald-400 via-teal-400 to-sky-400 p-8 text-white shadow-2xl md:flex animate-on-scroll">
+            <div class="space-y-6">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-semibold">Regístrate en minutos</span>
+                <h2 class="text-3xl font-semibold">Confirma tu correo y protege tu panel</h2>
+                <p class="text-sm text-white/80">Solo necesitas un correo electrónico válido y una contraseña segura. Te enviaremos un correo para verificar tu identidad.</p>
+            </div>
+            <div class="space-y-3 text-sm text-white/80">
+                <p><i class="fa-solid fa-circle-check"></i> Activación por correo electrónico</p>
+                <p><i class="fa-solid fa-lock"></i> Contraseñas cifradas con estándares actuales</p>
+                <p><i class="fa-solid fa-user-shield"></i> Acceso restringido al panel administrativo</p>
+            </div>
+        </div>
+        <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
+            <h1 class="text-3xl font-semibold text-slate-900">Crea tu cuenta</h1>
+            <p class="text-sm text-slate-500">
+                Completa el formulario para generar tu usuario. Te enviaremos un enlace de confirmación al correo proporcionado.
+            </p>
+            <form method="post" class="space-y-5">
+                <div>
+                    <label for="name" class="mb-2 block text-sm font-medium text-slate-500">Nombre (opcional)</label>
+                    <input id="name" name="name" type="text" maxlength="255"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                           placeholder="Cómo te llamamos" />
+                </div>
+                <div>
+                    <label for="email" class="mb-2 block text-sm font-medium text-slate-500">Correo electrónico</label>
+                    <input id="email" name="email" type="email" required maxlength="255"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                           placeholder="tu-correo@ejemplo.com" />
+                </div>
+                <div>
+                    <label for="password" class="mb-2 block text-sm font-medium text-slate-500">Contraseña</label>
+                    <input id="password" name="password" type="password" required minlength="8"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                           placeholder="Mínimo 8 caracteres" />
+                </div>
+                <div>
+                    <label for="confirm_password" class="mb-2 block text-sm font-medium text-slate-500">Confirmar contraseña</label>
+                    <input id="confirm_password" name="confirm_password" type="password" required minlength="8"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                           placeholder="Repite tu contraseña" />
+                </div>
+                <button type="submit"
+                        class="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-emerald-600 hover:to-sky-600 focus:outline-none focus:ring-2 focus:ring-emerald-200">
+                    Crear cuenta
+                </button>
+            </form>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs text-slate-500">
+                ¿Ya confirmaste tu correo? <a class="font-semibold text-emerald-600 hover:text-emerald-700" href="{{ url_for('login') }}">Inicia sesión</a> con tus credenciales.
+            </div>
+            <div class="text-xs text-slate-400">
+                Al registrarte aceptas que te enviemos comunicaciones relacionadas con la gestión del panel administrativo.
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
