@@ -8,8 +8,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'images', 'imagesProperty')
 
-    # OAuth providers
-    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
-    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-    APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID')
-    APPLE_CLIENT_SECRET = os.environ.get('APPLE_CLIENT_SECRET')
+    MIN_PASSWORD_LENGTH = int(os.environ.get('MIN_PASSWORD_LENGTH', 8))
+    CAPTCHA_SITE_KEY = os.environ.get('CAPTCHA_SITE_KEY')
+    CAPTCHA_SECRET_KEY = os.environ.get('CAPTCHA_SECRET_KEY')

@@ -2,17 +2,15 @@ from flask_sqlalchemy import SQLAlchemy
 
 
 db = SQLAlchemy()
-
-
 class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    provider = db.Column(db.String(50), nullable=False)
-    provider_user_id = db.Column(db.String(255), nullable=False)
-    email = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(255), nullable=True)
-    picture = db.Column(db.String(512), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, server_default=db.true())
+    email_confirmed = db.Column(db.Boolean, nullable=False, server_default=db.false())
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -21,10 +19,8 @@ class User(db.Model):
         nullable=False,
     )
 
-    __table_args__ = (
-        db.UniqueConstraint('provider', 'provider_user_id', name='uq_users_provider_identity'),
-        db.UniqueConstraint('email', name='uq_users_email'),
-    )
+    def __repr__(self) -> str:  # pragma: no cover - simple representation helper
+        return f'<User {self.email}>'
 
 
 class Property(db.Model):

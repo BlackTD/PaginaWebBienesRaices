@@ -1,22 +1,12 @@
 import os
-from typing import Dict
 
-from authlib.integrations.flask_client import OAuth
-from flask import (
-    Flask,
-    abort,
-    current_app,
-    flash,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
+from flask import Flask, current_app, flash, redirect, render_template, request, session, url_for
 from flask_migrate import Migrate
 
 from config import Config
+from forms import LoginForm, RegistrationForm
 from models import Property, User, db
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 
@@ -27,163 +17,62 @@ def create_app() -> Flask:
     db.init_app(app)
     Migrate(app, db)
 
-    oauth = OAuth(app)
-    providers: Dict[str, Dict[str, str]] = {}
-
-    google_client_id = app.config.get('GOOGLE_CLIENT_ID')
-    google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
-    if google_client_id and google_client_secret:
-        oauth.register(
-            name='google',
-            client_id=google_client_id,
-            client_secret=google_client_secret,
-            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-            client_kwargs={'scope': 'openid email profile', 'prompt': 'select_account'},
+    @app.route('/register', methods=['GET', 'POST'])
+    def register():
+        form = RegistrationForm(request.form if request.method == 'POST' else None)
+        captcha_enabled = bool(
+            current_app.config.get('CAPTCHA_SITE_KEY')
+            and current_app.config.get('CAPTCHA_SECRET_KEY')
         )
-        providers['google'] = {
-            'label': 'Continuar con Google',
-            'icon': 'fa-brands fa-google',
-            'class': 'bg-white text-slate-700 hover:bg-slate-50',
-        }
 
-    apple_client_id = app.config.get('APPLE_CLIENT_ID')
-    apple_client_secret = app.config.get('APPLE_CLIENT_SECRET')
-    if apple_client_id and apple_client_secret:
-        oauth.register(
-            name='apple',
-            client_id=apple_client_id,
-            client_secret=apple_client_secret,
-            server_metadata_url='https://appleid.apple.com/.well-known/openid-configuration',
-            client_kwargs={
-                'scope': 'name email',
-                'response_mode': 'form_post',
-                'response_type': 'code id_token',
-            },
-        )
-        providers['apple'] = {
-            'label': 'Continuar con Apple',
-            'icon': 'fa-brands fa-apple',
-            'class': 'bg-black text-white hover:bg-slate-800',
-        }
+        if form.validate_on_submit():
+            email = form.email.data.strip().lower()
+            confirm_email = form.confirm_email.data.strip().lower()
+            form.email.data = email
+            form.confirm_email.data = confirm_email
+            name = form.name.data.strip() if form.name.data else None
+            password = form.password.data
 
-    app.oauth = oauth
-    app.config['ENABLED_OAUTH_PROVIDERS'] = providers
-
-    @app.before_request
-    def create_tables() -> None:
-        db.create_all()
-
-    def get_oauth_client(provider: str):
-        client = app.oauth.create_client(provider)
-        if not client:
-            abort(404)
-        return client
-
-    @app.route('/login')
-    def login():
-        providers_meta = app.config.get('ENABLED_OAUTH_PROVIDERS', {})
-        if not providers_meta:
-            flash(
-                'El inicio de sesión con terceros no está configurado. '
-                'Asegúrate de definir las claves de Google o Apple en las variables de entorno.'
-            )
-        return render_template('login.html', oauth_providers=providers_meta)
-
-    @app.route('/login/<provider>')
-    def oauth_login(provider: str):
-        client = get_oauth_client(provider)
-        redirect_uri = url_for('oauth_callback', provider=provider, _external=True)
-        nonce = os.urandom(16).hex()
-        session['oauth_nonce'] = nonce
-        if provider == 'apple':
-            return client.authorize_redirect(redirect_uri, response_mode='form_post', nonce=nonce)
-        return client.authorize_redirect(redirect_uri, nonce=nonce)
-
-    @app.route('/auth/<provider>', methods=['GET', 'POST'])
-    def oauth_callback(provider: str):
-        client = get_oauth_client(provider)
-        token = client.authorize_access_token()
-        user_info = None
-
-        nonce = session.pop('oauth_nonce', None)
-
-        try:
-            if provider == 'google':
-                user_info = client.parse_id_token(token, nonce=nonce)
-                if not user_info:
-                    response = client.get('userinfo')
-                    user_info = response.json() if response else None
-            elif provider == 'apple':
-                user_info = client.parse_id_token(token, nonce=nonce)
+            min_length = current_app.config.get('MIN_PASSWORD_LENGTH', 8)
+            if len(password) < min_length:
+                form.password.errors.append(
+                    f'La contraseña debe tener al menos {min_length} caracteres.'
+                )
+            elif User.query.filter_by(email=email).first():
+                form.email.errors.append('Ya existe una cuenta asociada a este correo.')
             else:
-                user_info = client.parse_id_token(token, nonce=nonce)
-        except Exception as exc:  # pragma: no cover - depends on provider response
-            current_app.logger.exception('OAuth callback error for %s', provider, exc_info=exc)
-            flash('Ocurrió un error al validar la respuesta de autenticación.')
-            return redirect(url_for('login'))
+                password_hash = generate_password_hash(password)
+                user = User(email=email, password_hash=password_hash, name=name)
+                db.session.add(user)
+                db.session.commit()
+                flash('Cuenta creada correctamente. Ahora puedes iniciar sesión.')
+                return redirect(url_for('login'))
 
-        if not user_info:
-            flash('No se pudo obtener la información del usuario. Intenta nuevamente.')
-            return redirect(url_for('login'))
+        return render_template('register.html', form=form, captcha_enabled=captcha_enabled)
 
-        provider_user_id = str(user_info.get('sub') or user_info.get('id'))
-        email = user_info.get('email')
-        raw_name = user_info.get('name')
-        if isinstance(raw_name, dict):
-            name = ' '.join(
-                part
-                for part in [raw_name.get('firstName'), raw_name.get('lastName')]
-                if part
-            ).strip()
-        else:
-            name = raw_name
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        form = LoginForm(request.form if request.method == 'POST' else None)
 
-        if not name:
-            name = (
-                user_info.get('given_name')
-                or user_info.get('fullName')
-                or user_info.get('preferred_username')
-            )
-        picture = user_info.get('picture')
+        if form.validate_on_submit():
+            email = form.email.data.strip().lower()
+            form.email.data = email
+            password = form.password.data
+            user = User.query.filter_by(email=email).first()
 
-        if not provider_user_id or not email:
-            flash('El proveedor no envió datos suficientes para crear la cuenta.')
-            return redirect(url_for('login'))
+            if not user or not check_password_hash(user.password_hash, password):
+                form.password.errors.append('Correo o contraseña inválidos. Intenta nuevamente.')
+            elif not user.is_active:
+                flash('Tu cuenta está desactivada. Contacta al administrador para reactivarla.', 'warning')
+            else:
+                session['logged_in'] = True
+                session['user_id'] = user.id
+                session['user_name'] = user.name or user.email
+                session['user_email'] = user.email
+                flash('Inicio de sesión exitoso.')
+                return redirect(url_for('index'))
 
-        user = User.query.filter_by(provider=provider, provider_user_id=provider_user_id).first()
-
-        if not user and email:
-            user = User.query.filter_by(email=email.lower()).first()
-            if user:
-                user.provider = provider
-                user.provider_user_id = provider_user_id
-
-        if not user:
-            user = User(
-                provider=provider,
-                provider_user_id=provider_user_id,
-                email=email.lower(),
-                name=name,
-                picture=picture,
-            )
-            db.session.add(user)
-        else:
-            user.email = email.lower()
-            if name:
-                user.name = name
-            if picture:
-                user.picture = picture
-
-        db.session.commit()
-
-        session['logged_in'] = True
-        session['user_id'] = user.id
-        session['user_name'] = user.name or user.email
-        session['user_email'] = user.email
-        session['user_picture'] = user.picture
-
-        flash('Inicio de sesión exitoso.')
-        return redirect(url_for('index'))
+        return render_template('login.html', form=form)
 
     @app.route('/logout')
     def logout():
@@ -192,7 +81,6 @@ def create_app() -> Flask:
             'user_id',
             'user_name',
             'user_email',
-            'user_picture',
         ]
         for key in session_keys:
             session.pop(key, None)
