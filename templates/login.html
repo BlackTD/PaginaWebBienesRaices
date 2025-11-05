@@ -3,39 +3,49 @@
 
 {% block content %}
 <section class="relative py-20">
-    <div class="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 md:flex-row md:items-stretch">
+    <div class="mx-auto flex max-w-4xl flex-col items-center gap-10 px-6 md:flex-row md:items-start">
         <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
-            <h1 class="text-3xl font-semibold text-slate-900">Bienvenido de vuelta</h1>
+            <h1 class="text-3xl font-semibold text-slate-900">Accede a tu cuenta</h1>
             <p class="text-sm text-slate-500">
-                Accede al panel administrativo utilizando tus credenciales de confianza.
-                Inicia sesión con tu cuenta de Google, Apple u otro proveedor habilitado.
+                Ingresa con el correo y la contraseña que registraste anteriormente para administrar el catálogo.
             </p>
-            <div class="space-y-4">
-                {% if oauth_providers %}
-                    {% for provider, meta in oauth_providers.items() %}
-                        <a href="{{ url_for('oauth_login', provider=provider) }}"
-                           class="flex w-full items-center justify-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold transition-all duration-200 {{ meta.class }}">
-                            <i class="{{ meta.icon }} text-lg"></i> {{ meta.label }}
-                        </a>
+            <form method="post" novalidate class="space-y-5">
+                {{ form.csrf_token }}
+                {% if form.csrf_token.errors %}
+                    {% for error in form.csrf_token.errors %}
+                        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600">{{ error }}</div>
                     {% endfor %}
-                {% else %}
-                    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                        Aún no hay proveedores de autenticación configurados. Configura las claves de cliente y vuelve a intentar.
-                    </div>
                 {% endif %}
-            </div>
-            <div class="text-xs text-slate-400">
-                Al continuar, aceptas el tratamiento de tus datos únicamente para gestionar el acceso administrativo.
-            </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.email.id }}">{{ form.email.label.text }}</label>
+                    {{ form.email(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.email.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.password.id }}">{{ form.password.label.text }}</label>
+                    {{ form.password(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.password.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="pt-2">
+                    {{ form.submit(class='w-full rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-600') }}
+                </div>
+            </form>
+            <p class="text-xs text-slate-500">
+                ¿No tienes cuenta? <a href="{{ url_for('register') }}" class="font-semibold text-rose-500 hover:underline">Regístrate aquí</a>.
+            </p>
         </div>
         <div class="glass-card hidden h-full max-w-md flex-1 flex-col justify-between bg-gradient-to-br from-rose-500 via-rose-400 to-amber-400 p-8 text-white shadow-2xl md:flex animate-on-scroll">
             <div class="space-y-6">
                 <span class="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-semibold">Panel exclusivo</span>
-                <h2 class="text-3xl font-semibold">Gestiona tu portafolio con estilo</h2>
-                <p class="text-sm text-white/80">Sube nuevas propiedades, actualiza precios y controla el contenido del catálogo desde una interfaz moderna y amigable.</p>
+                <h2 class="text-3xl font-semibold">Gestiona tus propiedades</h2>
+                <p class="text-sm text-white/80">Sube nuevas propiedades, actualiza precios y controla el contenido del catálogo desde una interfaz moderna.</p>
             </div>
             <div class="space-y-3 text-sm text-white/80">
-                <p><i class="fa-solid fa-shield-halved"></i> Autenticación segura</p>
+                <p><i class="fa-solid fa-shield-halved"></i> Credenciales protegidas con cifrado</p>
                 <p><i class="fa-solid fa-chart-column"></i> Indicadores claros</p>
                 <p><i class="fa-solid fa-bolt"></i> Carga rápida de imágenes</p>
             </div>

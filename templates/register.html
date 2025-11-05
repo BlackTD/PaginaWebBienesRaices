@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Registro · Bienes Raíces Boutique{% endblock %}
+
+{% block content %}
+<section class="relative py-20">
+    <div class="mx-auto flex max-w-4xl flex-col items-center gap-10 px-6 md:flex-row md:items-start">
+        <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
+            <h1 class="text-3xl font-semibold text-slate-900">Crea tu cuenta</h1>
+            <p class="text-sm text-slate-500">
+                Registra un correo y una contraseña segura para acceder al panel administrativo. Tu nombre es opcional.
+            </p>
+            <form method="post" novalidate class="space-y-5">
+                {{ form.csrf_token }}
+                {% if form.csrf_token.errors %}
+                    {% for error in form.csrf_token.errors %}
+                        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-600">{{ error }}</div>
+                    {% endfor %}
+                {% endif %}
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.email.id }}">{{ form.email.label.text }}</label>
+                    {{ form.email(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.email.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.confirm_email.id }}">{{ form.confirm_email.label.text }}</label>
+                    {{ form.confirm_email(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.confirm_email.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.name.id }}">{{ form.name.label.text }}</label>
+                    {{ form.name(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.name.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.password.id }}">{{ form.password.label.text }}</label>
+                    {{ form.password(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.password.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.confirm_password.id }}">{{ form.confirm_password.label.text }}</label>
+                    {{ form.confirm_password(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.confirm_password.errors %}
+                        <p class="text-xs text-rose-600">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% if captcha_enabled %}
+                    <div class="space-y-2">
+                        <label class="text-sm font-medium text-slate-700">Captcha</label>
+                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                            Integración de captcha pendiente de configuración.
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="pt-2">
+                    {{ form.submit(class='w-full rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-600') }}
+                </div>
+            </form>
+            <p class="text-xs text-slate-500">
+                ¿Ya tienes una cuenta? <a href="{{ url_for('login') }}" class="font-semibold text-rose-500 hover:underline">Inicia sesión aquí</a>.
+            </p>
+        </div>
+        <div class="glass-card hidden h-full max-w-md flex-1 flex-col justify-between bg-gradient-to-br from-rose-500 via-rose-400 to-amber-400 p-8 text-white shadow-2xl md:flex animate-on-scroll">
+            <div class="space-y-6">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-sm font-semibold">Acceso seguro</span>
+                <h2 class="text-3xl font-semibold">Tu información protegida</h2>
+                <p class="text-sm text-white/80">Utilizamos contraseñas cifradas y controles internos para proteger el acceso al administrador.</p>
+            </div>
+            <div class="space-y-3 text-sm text-white/80">
+                <p><i class="fa-solid fa-lock"></i> Contraseñas cifradas</p>
+                <p><i class="fa-solid fa-user-check"></i> Confirmación de correo pendiente</p>
+                <p><i class="fa-solid fa-house"></i> Gestiona tu portafolio fácilmente</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
