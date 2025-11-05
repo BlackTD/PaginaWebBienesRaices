@@ -1,274 +1,381 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from models import db, User, Property
-from config import Config
 import os
+import smtplib
+from email.message import EmailMessage
+
+from flask import (
+    Flask,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from flask_migrate import Migrate
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+from config import Config
+from models import Property, User, db
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
-import time
 
-app = Flask(__name__)
-app.config.from_object(Config)
 
-# Inicializar la base de datos
-db.init_app(app)
-migrate = Migrate(app, db)
+def create_app() -> Flask:
+    app = Flask(__name__)
+    app.config.from_object(Config)
 
-@app.before_request
-def create_tables():
-    db.create_all()  # Crea las tablas si no existen
+    db.init_app(app)
+    Migrate(app, db)
 
-## Método para verificar si un usuario está bloqueado
-def is_user_blocked(username):
-    user = User.query.filter_by(name=username).first()
-    if user and hasattr(user, 'is_blocked') and user.is_blocked:
+    # Garantiza que las tablas existan al iniciar la aplicación en lugar de
+    # evaluarlo en cada solicitud mediante un before_request costoso.
+    with app.app_context():
+        db.create_all()
+
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+    def send_email(subject: str, recipient: str, body: str) -> bool:
+        mail_username = app.config.get('MAIL_USERNAME')
+        mail_password = app.config.get('MAIL_PASSWORD')
+        mail_sender = app.config.get('MAIL_SENDER') or mail_username
+        mail_server = app.config.get('MAIL_SERVER')
+        mail_port = app.config.get('MAIL_PORT')
+        use_tls = app.config.get('MAIL_USE_TLS', True)
+        subject_prefix = app.config.get('MAIL_SUBJECT_PREFIX', '').strip()
+
+        if not mail_username or not mail_password or not mail_sender:
+            app.logger.warning('El correo no se envió: configuración SMTP incompleta.')
+            return False
+
+        message = EmailMessage()
+        formatted_subject = f"{subject_prefix} {subject}".strip()
+        message['Subject'] = formatted_subject
+        message['From'] = mail_sender
+        message['To'] = recipient
+        message.set_content(body)
+
+        try:
+            with smtplib.SMTP(mail_server, mail_port) as server:
+                if use_tls:
+                    server.starttls()
+                server.login(mail_username, mail_password)
+                server.send_message(message)
+        except Exception as exc:  # pragma: no cover - depende del servidor SMTP
+            app.logger.exception('Error enviando correo a %s', recipient, exc_info=exc)
+            return False
         return True
-    return False
 
+    def send_confirmation_email(user: User) -> bool:
+        token = serializer.dumps(user.email, salt='email-confirm')
+        confirm_url = url_for('confirm_email', token=token, _external=True)
+        greeting = user.name or 'Hola'
+        subject = 'Confirma tu correo electrónico'
+        body = (
+            f"{greeting},\n\n"
+            "Gracias por registrarte en Bienes Raíces Boutique. Para activar tu cuenta, "
+            f"haz clic en el siguiente enlace:\n{confirm_url}\n\n"
+            "Si no solicitaste esta cuenta, puedes ignorar este mensaje.\n\n"
+            "Saludos,\nEl equipo de Bienes Raíces Boutique"
+        )
+        return send_email(subject, user.email, body)
 
-# Ruta para el login
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        user = User.query.filter_by(name=username).first()
-        
-        if user:
-            # Revisar si el usuario está permanentemente bloqueado
-            if user.is_permanently_blocked:
-                flash("Tu cuenta está permanentemente bloqueada debido a múltiples intentos fallidos.")
-                return render_template('login.html')
-            
-            # Revisar si el usuario está temporalmente bloqueado
-            if user.is_blocked:
-                lock_time = session.get(f'lock_time_{username}', 0)
-                if lock_time and time.time() - lock_time < 30:
-                    remaining_time = int(30 - (time.time() - lock_time))
-                    flash(f"Usuario bloqueado temporalmente. Intenta nuevamente en {remaining_time} segundos.")
-                    return render_template('login.html', username=username, remaining_time=remaining_time)
+    @app.route('/register', methods=['GET', 'POST'])
+    def register():
+        if session.get('logged_in'):
+            return redirect(url_for('admin'))
+
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip() or None
+            email = request.form.get('email', '').strip().lower()
+            password = request.form.get('password', '')
+            confirm_password = request.form.get('confirm_password', '')
+
+            if not email or '@' not in email:
+                flash('Ingresa un correo electrónico válido.')
+                return redirect(url_for('register'))
+
+            if len(password) < 8:
+                flash('La contraseña debe tener al menos 8 caracteres.')
+                return redirect(url_for('register'))
+
+            if password != confirm_password:
+                flash('Las contraseñas no coinciden.')
+                return redirect(url_for('register'))
+
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                if existing_user.email_confirmed:
+                    flash('Ya existe una cuenta registrada con ese correo. Inicia sesión.')
+                    return redirect(url_for('login'))
+                if send_confirmation_email(existing_user):
+                    flash('Ya existe una cuenta sin confirmar. Te reenviamos el correo de activación.')
                 else:
-                    user.is_blocked = False
-                    db.session.commit()  # Liberar el bloqueo temporal
+                    flash('Ya existe una cuenta pendiente de confirmar, pero no se pudo enviar el correo. Contacta al administrador.')
+                return redirect(url_for('login'))
 
-            # Verificar la contraseña
-            if user.password == password:
-                session['logged_in'] = True
-                session.pop(f'failed_attempts_{username}', None)  # Limpiar los intentos fallidos
-                return redirect(url_for('index'))
+            password_hash = generate_password_hash(password)
+            user = User(email=email, password_hash=password_hash, name=name)
+            db.session.add(user)
+            db.session.commit()
+
+            if send_confirmation_email(user):
+                flash('Registro exitoso. Revisa tu bandeja de entrada para confirmar tu correo.')
             else:
-                # Obtener los intentos fallidos almacenados en sesión
-                failed_attempts = session.get(f'failed_attempts_{username}', 0)
-                
-                # Si ha fallado los primeros 3 intentos
-                if failed_attempts < 3:
-                    session[f'failed_attempts_{username}'] = failed_attempts + 1
-                    remaining_attempts = 3 - (failed_attempts + 1)
-                    flash(f"Credenciales incorrectas. Intentos restantes: {remaining_attempts}")
-                    return render_template('login.html', username=username)
+                flash('Tu cuenta fue creada, pero no se pudo enviar el correo de confirmación. Contacta al administrador.')
 
-                # Después de los 3 primeros intentos, verificar si tiene intentos adicionales (1 o 2)
-                if failed_attempts == 3:
-                    session[f'lock_time_{username}'] = time.time()  # Registrar el tiempo de bloqueo temporal
-                    user.is_blocked = True
-                    db.session.commit()  # Guardar el cambio en el estado de bloqueo
-                    session[f'failed_attempts_{username}'] = failed_attempts + 1
-                    flash("Has fallado 4 veces. Ahora debes esperar 30 segundos para el siguiente intento.")
-                    return render_template('login.html', username=username)
+            return redirect(url_for('login'))
 
-                # Después de los 4 intentos fallidos (3 iniciales + 1 adicional), permitir el último intento
-                if failed_attempts == 4:
-                    session[f'lock_time_{username}'] = time.time()  # Registrar el tiempo de bloqueo temporal
-                    user.is_blocked = True
-                    db.session.commit()  # Guardar el cambio en el estado de bloqueo
-                    session[f'failed_attempts_{username}'] = failed_attempts + 1
-                    flash("Has fallado 5 veces. Ahora debes esperar 30 segundos para el siguiente intento.")
-                    return render_template('login.html', username=username)
+        return render_template('register.html')
 
-                # Si el usuario falló el último intento (5 intentos en total)
-                if failed_attempts >= 5:
-                    user.is_permanently_blocked = True  # Bloquear permanentemente al usuario
-                    db.session.commit()  # Guardar los cambios en la base de datos
-                    flash("Has fallado todos los intentos. Tu cuenta está bloqueada permanentemente.")
-                    return render_template('login.html')
+    @app.route('/confirm/<token>')
+    def confirm_email(token: str):
+        max_age = current_app.config.get('MAIL_TOKEN_MAX_AGE', 60 * 60 * 24)
+        try:
+            email = serializer.loads(token, salt='email-confirm', max_age=max_age)
+        except SignatureExpired:
+            flash('El enlace de confirmación ha expirado. Solicita uno nuevo registrándote nuevamente.')
+            return redirect(url_for('register'))
+        except BadSignature:
+            flash('El enlace de confirmación no es válido.')
+            return redirect(url_for('register'))
 
-        # Si el usuario no existe
-        flash("Usuario no encontrado.")
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('No se encontró una cuenta asociada a ese correo.')
+            return redirect(url_for('register'))
+
+        if user.email_confirmed:
+            flash('Tu correo ya estaba confirmado. Puedes iniciar sesión.')
+            return redirect(url_for('login'))
+
+        user.email_confirmed = True
+        db.session.commit()
+        flash('¡Listo! Tu correo ha sido confirmado. Ya puedes iniciar sesión.')
+        return redirect(url_for('login'))
+
+    @app.route('/resend-confirmation', methods=['POST'])
+    def resend_confirmation():
+        email = request.form.get('email', '').strip().lower()
+        if not email:
+            flash('Ingresa un correo válido para reenviar la confirmación.')
+            return redirect(url_for('login'))
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('Si existe una cuenta asociada, recibirás un correo con instrucciones.')
+            return redirect(url_for('login'))
+
+        if user.email_confirmed:
+            flash('Tu correo ya está confirmado. Puedes iniciar sesión directamente.')
+            return redirect(url_for('login'))
+
+        if send_confirmation_email(user):
+            flash('Te enviamos un nuevo correo de confirmación.')
+        else:
+            flash('No se pudo enviar el correo de confirmación. Contacta al administrador.')
+        return redirect(url_for('login'))
+
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if session.get('logged_in'):
+            return redirect(url_for('admin'))
+
+        if request.method == 'POST':
+            email = request.form.get('email', '').strip().lower()
+            password = request.form.get('password', '')
+
+            user = User.query.filter_by(email=email).first()
+
+            if not user or not check_password_hash(user.password_hash, password):
+                flash('Correo o contraseña incorrectos.')
+                return redirect(url_for('login'))
+
+            if not user.email_confirmed:
+                flash('Debes confirmar tu correo electrónico antes de iniciar sesión.')
+                return redirect(url_for('login'))
+
+            session['logged_in'] = True
+            session['user_id'] = user.id
+            session['user_name'] = user.name or user.email
+            session['user_email'] = user.email
+
+            flash('Inicio de sesión exitoso.')
+            return redirect(url_for('admin'))
+
         return render_template('login.html')
 
-    return render_template('login.html')
+    @app.route('/logout')
+    def logout():
+        session_keys = [
+            'logged_in',
+            'user_id',
+            'user_name',
+            'user_email',
+        ]
+        for key in session_keys:
+            session.pop(key, None)
+        flash('Sesión cerrada correctamente.')
+        return redirect(url_for('index'))
 
-# Ruta para el panel de administración, solo accesible si el usuario está logueado
-@app.route('/adminis')
-def admin():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    return render_template('adminis.html')
+    @app.route('/adminis')
+    def admin():
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return render_template('adminis.html')
 
-@app.route('/add_property', methods=['GET', 'POST'])
-def add_property():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        name = request.form['name']
-        description = request.form['description']
-        location = request.form['location']
-        price = float(request.form['price'])
-        
-        # Manejar la imagen principal
-        main_image_file = request.files.get('main_image')
-        if main_image_file and main_image_file.filename != '':  # Verificar que se haya seleccionado un archivo
-            main_filename = secure_filename(main_image_file.filename)
-            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                os.makedirs(app.config['UPLOAD_FOLDER'])
-            main_image_file.save(main_image_path)
-            main_image_url = f'static/images/imagesProperty/{main_filename}'
-        else:
-            main_image_url = None
-        
-        # Manejar las imágenes de repertorio (ahora es opcional)
-        repertory_files = request.files.getlist('repertory_images')
-        repertory_urls = []
-        if repertory_files:  # Solo procesar si se suben imágenes
-            for file in repertory_files:
-                if file.filename != '':  # Verificar que se haya seleccionado un archivo
-                    filename = secure_filename(file.filename)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                        os.makedirs(app.config['UPLOAD_FOLDER'])
-                    file.save(file_path)
-                    repertory_urls.append(f'static/images/imagesProperty/{filename}')
-        
-        repertory_images = ",".join(repertory_urls)  # Convertir la lista a una cadena separada por comas
-        
-        # Crear la nueva propiedad
-        new_property = Property(
-            name=name,
-            description=description,
-            location=location,
-            price=price,
-            main_image=main_image_url,
-            repertory_images=repertory_images if repertory_images else None  # Si no hay imágenes, se guarda None
-        )
-        
-        db.session.add(new_property)
-        db.session.commit()
-        
-        return redirect(url_for('admin'))
-    
-    return render_template('adminis.html')
+    @app.route('/add_property', methods=['GET', 'POST'])
+    def add_property():
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
 
-@app.route('/edit_property/<int:property_id>', methods=['GET', 'POST'])
-def edit_property(property_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    property = Property.query.get_or_404(property_id)
-    
-    if request.method == 'POST':
-        # Obtener los nuevos datos
-        name = request.form['name']
-        description = request.form['description']
-        location = request.form['location']
-        price = float(request.form['price'])
-        
-        # Manejar la imagen principal
-        main_image_file = request.files.get('main_image')
-        if main_image_file and main_image_file.filename:
-            main_filename = secure_filename(main_image_file.filename)
-            main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
-            main_image_file.save(main_image_path)
-            main_image_url = f'static/images/imagesProperty/{main_filename}'
-        else:
-            main_image_url = property.main_image  # Mantener la imagen original si no se sube una nueva
+        if request.method == 'POST':
+            name = request.form['name']
+            description = request.form['description']
+            location = request.form['location']
+            price = float(request.form['price'])
 
-        # Para agregar nuevas imágenes sin eliminar las anteriores
-        repertory_files = request.files.getlist('repertory_images')
-        repertory_urls = []
-        if repertory_files:  # Solo procesar si se suben imágenes
-            for file in repertory_files:
-                if file.filename:  # Verificar si el archivo tiene un nombre (es decir, si se seleccionó un archivo)
-                    filename = secure_filename(file.filename)
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(file_path)
-                    repertory_urls.append(f'static/images/imagesProperty/{filename}')
+            main_image_file = request.files.get('main_image')
+            if main_image_file and main_image_file.filename != '':
+                main_filename = secure_filename(main_image_file.filename)
+                main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
+                if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                    os.makedirs(app.config['UPLOAD_FOLDER'])
+                main_image_file.save(main_image_path)
+                main_image_url = f'static/images/imagesProperty/{main_filename}'
+            else:
+                main_image_url = None
 
-        # Si ya existen imágenes de repertorio, agregamos las nuevas al final
-        if property.repertory_images:
-            repertory_urls = property.repertory_images.split(',') + repertory_urls
+            repertory_files = request.files.getlist('repertory_images')
+            repertory_urls = []
+            if repertory_files:
+                for file in repertory_files:
+                    if file.filename != '':
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                            os.makedirs(app.config['UPLOAD_FOLDER'])
+                        file.save(file_path)
+                        repertory_urls.append(f'static/images/imagesProperty/{filename}')
 
-        # Guardar los cambios en la propiedad
-        property.name = name
-        property.description = description
-        property.location = location
-        property.price = price
-        property.main_image = main_image_url
-        property.repertory_images = ",".join(repertory_urls)  # Convertir lista en string separado por comas
+            repertory_images = ','.join(repertory_urls)
 
-        db.session.commit()
-        return redirect(url_for('property_detail', property_id=property.id))
-    
-    return render_template('editProperty.html', property=property)
-    
-# Ruta para cerrar sesión
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)  # Eliminar la sesión
-    return redirect(url_for('index'))
+            new_property = Property(
+                name=name,
+                description=description,
+                location=location,
+                price=price,
+                main_image=main_image_url,
+                repertory_images=repertory_images if repertory_images else None,
+            )
 
-@app.route('/')
-def index():
-    featured_properties = Property.query.order_by(Property.id.desc()).limit(3).all()
-    return render_template('index.html', featured_properties=featured_properties)
-
-@app.route('/catalogo')
-def catalogo():
-    properties = Property.query.all()  # Obtener todas las propiedades
-    return render_template('catalogo.html', properties=properties)
-
-@app.route('/property/<int:property_id>')
-def property_detail(property_id):
-    # Obtener la propiedad específica por ID
-    property = Property.query.get_or_404(property_id)
-    return render_template('propertyDetail.html', property=property)
-
-@app.route('/delete_property/<int:property_id>', methods=['POST'])
-def delete_property(property_id):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    property_to_delete = Property.query.get_or_404(property_id)
-    db.session.delete(property_to_delete)
-    db.session.commit()
-    return redirect(url_for('catalogo'))
-
-@app.route('/remove_repertory_image', methods=['POST'])
-def remove_repertory_image():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    data = request.get_json()
-    image_to_remove = data.get('image')
-
-    if image_to_remove:
-        # Eliminar la imagen del sistema de archivos
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_to_remove.split('/')[-1])
-        if os.path.exists(image_path):
-            os.remove(image_path)
-        
-        # Eliminar la imagen de repertorio en la base de datos
-        property = Property.query.filter(Property.repertory_images.like(f'%{image_to_remove}%')).first()
-        if property:
-            images = property.repertory_images.split(',')
-            images = [img for img in images if img != image_to_remove]
-            property.repertory_images = ','.join(images)
+            db.session.add(new_property)
             db.session.commit()
-            return {'success': True}
-    
-    return {'success': False}
+
+            return redirect(url_for('admin'))
+
+        return render_template('adminis.html')
+
+    @app.route('/edit_property/<int:property_id>', methods=['GET', 'POST'])
+    def edit_property(property_id):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+        property = Property.query.get_or_404(property_id)
+
+        if request.method == 'POST':
+            name = request.form['name']
+            description = request.form['description']
+            location = request.form['location']
+            price = float(request.form['price'])
+
+            main_image_file = request.files.get('main_image')
+            if main_image_file and main_image_file.filename:
+                main_filename = secure_filename(main_image_file.filename)
+                main_image_path = os.path.join(app.config['UPLOAD_FOLDER'], main_filename)
+                main_image_file.save(main_image_path)
+                main_image_url = f'static/images/imagesProperty/{main_filename}'
+            else:
+                main_image_url = property.main_image
+
+            repertory_files = request.files.getlist('repertory_images')
+            repertory_urls = []
+            if repertory_files:
+                for file in repertory_files:
+                    if file.filename:
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                        repertory_urls.append(f'static/images/imagesProperty/{filename}')
+
+            if property.repertory_images:
+                repertory_urls = property.repertory_images.split(',') + repertory_urls
+
+            property.name = name
+            property.description = description
+            property.location = location
+            property.price = price
+            property.main_image = main_image_url
+            property.repertory_images = ','.join(repertory_urls)
+
+            db.session.commit()
+            return redirect(url_for('property_detail', property_id=property.id))
+
+        return render_template('editProperty.html', property=property)
+
+    @app.route('/')
+    def index():
+        featured_properties = Property.query.order_by(Property.id.desc()).limit(3).all()
+        return render_template('index.html', featured_properties=featured_properties)
+
+    @app.route('/catalogo')
+    def catalogo():
+        properties = Property.query.all()
+        return render_template('catalogo.html', properties=properties)
+
+    @app.route('/property/<int:property_id>')
+    def property_detail(property_id):
+        property = Property.query.get_or_404(property_id)
+        return render_template('propertyDetail.html', property=property)
+
+    @app.route('/delete_property/<int:property_id>', methods=['POST'])
+    def delete_property(property_id):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+        property_to_delete = Property.query.get_or_404(property_id)
+        db.session.delete(property_to_delete)
+        db.session.commit()
+        return redirect(url_for('catalogo'))
+
+    @app.route('/remove_repertory_image', methods=['POST'])
+    def remove_repertory_image():
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+        data = request.get_json()
+        image_to_remove = data.get('image')
+
+        if image_to_remove:
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_to_remove.split('/')[-1])
+            if os.path.exists(image_path):
+                os.remove(image_path)
+
+            property = Property.query.filter(Property.repertory_images.like(f'%{image_to_remove}%')).first()
+            if property:
+                images = property.repertory_images.split(',')
+                images = [img for img in images if img != image_to_remove]
+                property.repertory_images = ','.join(images)
+                db.session.commit()
+                return {'success': True}
+
+        return {'success': False}
+
+    return app
+
+
+app = create_app()
+
 
 if __name__ == '__main__':
     app.run(debug=True)

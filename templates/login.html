@@ -5,30 +5,43 @@
 <section class="relative py-20">
     <div class="mx-auto flex max-w-5xl flex-col items-center gap-10 px-6 md:flex-row md:items-stretch">
         <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
-            <h1 class="text-3xl font-semibold text-slate-900">Bienvenido de vuelta</h1>
-            <p class="text-sm text-slate-500">Accede al panel administrativo para gestionar propiedades, actualizar información y ofrecer la mejor experiencia a tus clientes.</p>
-            <form action="{{ url_for('login') }}" method="POST" class="space-y-5">
+            <h1 class="text-3xl font-semibold text-slate-900">Inicia sesión</h1>
+            <p class="text-sm text-slate-500">
+                Accede al panel administrativo con tu correo electrónico y contraseña.
+                Si es la primera vez que ingresas, verifica que hayas confirmado tu correo.
+            </p>
+            <form method="post" class="space-y-5">
                 <div>
-                    <label for="username" class="text-sm font-semibold text-slate-600">Usuario</label>
-                    <input type="text" id="username" name="username" value="{{ username or '' }}" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
+                    <label for="email" class="mb-2 block text-sm font-medium text-slate-500">Correo electrónico</label>
+                    <input id="email" name="email" type="email" required
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                           placeholder="tu-correo@ejemplo.com" />
                 </div>
                 <div>
-                    <label for="password" class="text-sm font-semibold text-slate-600">Contraseña</label>
-                    <input type="password" id="password" name="password" class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-100" required />
+                    <label for="password" class="mb-2 block text-sm font-medium text-slate-500">Contraseña</label>
+                    <input id="password" name="password" type="password" required minlength="8"
+                           class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                           placeholder="Tu contraseña" />
                 </div>
-                <button type="submit" class="btn-primary w-full justify-center"><i class="fa-solid fa-right-to-bracket"></i> Iniciar sesión</button>
+                <button type="submit"
+                        class="w-full rounded-2xl bg-gradient-to-r from-rose-500 to-amber-400 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-rose-600 hover:to-amber-500 focus:outline-none focus:ring-2 focus:ring-rose-200">
+                    Ingresar
+                </button>
             </form>
-            {% if lock_time %}
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                    Usuario bloqueado. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span>.
-                </div>
-            {% elif remaining_time %}
-                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
-                    Usuario bloqueado temporalmente. Intenta nuevamente en <span id="time_remaining">{{ remaining_time }}</span> segundos.
-                </div>
-            {% endif %}
-            <div class="text-sm text-slate-500">
-                ¿Olvidaste tu contraseña? Escríbenos a <a class="font-semibold text-rose-500 hover:underline" href="mailto:contacto@cbinmobiliaria.com">contacto@cbinmobiliaria.com</a> para ayudarte.</div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs text-slate-500">
+                ¿No tienes cuenta? <a class="font-semibold text-rose-500 hover:text-rose-600" href="{{ url_for('register') }}">Crea una ahora</a> y confirma tu correo para comenzar.
+            </div>
+            <div class="space-y-2">
+                <p class="text-xs text-slate-400">¿No recibiste el correo de confirmación? Vuelve a enviarlo:</p>
+                <form method="post" action="{{ url_for('resend_confirmation') }}" class="flex flex-col gap-2 md:flex-row">
+                    <input name="email" type="email" required placeholder="tu-correo@ejemplo.com"
+                           class="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 shadow-sm transition focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200" />
+                    <button type="submit"
+                            class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-500 transition hover:bg-rose-100">
+                        Reenviar
+                    </button>
+                </form>
+            </div>
         </div>
         <div class="glass-card hidden h-full max-w-md flex-1 flex-col justify-between bg-gradient-to-br from-rose-500 via-rose-400 to-amber-400 p-8 text-white shadow-2xl md:flex animate-on-scroll">
             <div class="space-y-6">
@@ -37,30 +50,11 @@
                 <p class="text-sm text-white/80">Sube nuevas propiedades, actualiza precios y controla el contenido del catálogo desde una interfaz moderna y amigable.</p>
             </div>
             <div class="space-y-3 text-sm text-white/80">
-                <p><i class="fa-solid fa-shield-halved"></i> Autenticación segura</p>
-                <p><i class="fa-solid fa-chart-column"></i> Indicadores claros</p>
-                <p><i class="fa-solid fa-bolt"></i> Carga rápida de imágenes</p>
+                <p><i class="fa-solid fa-shield-halved"></i> Autenticación con contraseña cifrada</p>
+                <p><i class="fa-solid fa-envelope-circle-check"></i> Verificación de correo electrónico</p>
+                <p><i class="fa-solid fa-lock"></i> Sesiones seguras para el panel privado</p>
             </div>
         </div>
     </div>
 </section>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    const timeElement = document.getElementById('time_remaining');
-    let remaining = parseInt('{{ remaining_time if remaining_time else 0 }}', 10);
-
-    if (timeElement && remaining > 0) {
-        const interval = setInterval(() => {
-            remaining -= 1;
-            if (remaining <= 0) {
-                clearInterval(interval);
-                timeElement.textContent = '0 segundos';
-            } else {
-                timeElement.textContent = `${remaining} segundos`;
-            }
-        }, 1000);
-    }
-</script>
 {% endblock %}
