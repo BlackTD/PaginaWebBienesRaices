@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro - Bienes Raíces{% endblock %}
+
+{% block extra_head %}
+<style>
+    .auth-card {
+        max-width: 480px;
+        margin: 4rem auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="relative z-20 px-6 py-16">
+    <div class="auth-card glass-card p-10">
+        <h1 class="mb-6 text-3xl font-semibold text-slate-900">Crear cuenta</h1>
+        <p class="mb-8 text-slate-600">
+            Regístrate para administrar tus propiedades. Te enviaremos un enlace para confirmar tu correo electrónico.
+        </p>
+        <form method="post" class="space-y-6">
+            <div>
+                <label for="name" class="mb-2 block text-sm font-medium text-slate-600">Nombre completo</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value="{{ name or '' }}"
+                    class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    placeholder="Ej. María López"
+                />
+            </div>
+            <div>
+                <label for="email" class="mb-2 block text-sm font-medium text-slate-600">Correo electrónico</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value="{{ email or '' }}"
+                    required
+                    class="w-full rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-slate-800 shadow-inner focus:border-rose-300 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                    placeholder="nombre@ejemplo.com"
+                />
+            </div>
+            <button type="submit" class="btn-primary w-full justify-center">
+                Registrarme
+            </button>
+        </form>
+        <p class="mt-6 text-center text-sm text-slate-500">
+            ¿Ya tienes una cuenta? <a href="{{ url_for('login') }}" class="font-semibold text-rose-500 hover:text-rose-600">Inicia sesión</a>
+        </p>
+    </div>
+</section>
+{% endblock %}

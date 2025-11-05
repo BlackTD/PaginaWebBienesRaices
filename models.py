@@ -13,6 +13,9 @@ class User(db.Model):
     email = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(255), nullable=True)
     picture = db.Column(db.String(512), nullable=True)
+    confirmation_token = db.Column(db.String(255), nullable=True, unique=True)
+    confirmation_sent_at = db.Column(db.DateTime, nullable=True)
+    email_confirmed = db.Column(db.Boolean, nullable=False, server_default='0')
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     updated_at = db.Column(
         db.DateTime,

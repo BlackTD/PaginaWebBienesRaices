@@ -1,7 +1,10 @@
+import importlib
+import importlib.util
 import os
-from typing import Dict
+import secrets
+from datetime import datetime, timedelta
+from typing import Dict, Optional
 
-from authlib.integrations.flask_client import OAuth
 from flask import (
     Flask,
     abort,
@@ -13,11 +16,20 @@ from flask import (
     session,
     url_for,
 )
+from flask_mail import Mail, Message
 from flask_migrate import Migrate
 
 from config import Config
 from models import Property, User, db
 from werkzeug.utils import secure_filename
+
+
+_authlib_spec = importlib.util.find_spec('authlib.integrations.flask_client')
+_requests_spec = importlib.util.find_spec('requests')
+OAuth = importlib.import_module('authlib.integrations.flask_client').OAuth if _authlib_spec and _requests_spec else None
+
+
+mail = Mail()
 
 
 def create_app() -> Flask:
@@ -26,13 +38,14 @@ def create_app() -> Flask:
 
     db.init_app(app)
     Migrate(app, db)
+    mail.init_app(app)
 
-    oauth = OAuth(app)
+    oauth: Optional[object] = OAuth(app) if OAuth else None
     providers: Dict[str, Dict[str, str]] = {}
 
     google_client_id = app.config.get('GOOGLE_CLIENT_ID')
     google_client_secret = app.config.get('GOOGLE_CLIENT_SECRET')
-    if google_client_id and google_client_secret:
+    if oauth and google_client_id and google_client_secret:
         oauth.register(
             name='google',
             client_id=google_client_id,
@@ -48,7 +61,7 @@ def create_app() -> Flask:
 
     apple_client_id = app.config.get('APPLE_CLIENT_ID')
     apple_client_secret = app.config.get('APPLE_CLIENT_SECRET')
-    if apple_client_id and apple_client_secret:
+    if oauth and apple_client_id and apple_client_secret:
         oauth.register(
             name='apple',
             client_id=apple_client_id,
@@ -74,6 +87,8 @@ def create_app() -> Flask:
         db.create_all()
 
     def get_oauth_client(provider: str):
+        if not app.oauth:
+            abort(404)
         client = app.oauth.create_client(provider)
         if not client:
             abort(404)
@@ -82,6 +97,11 @@ def create_app() -> Flask:
     @app.route('/login')
     def login():
         providers_meta = app.config.get('ENABLED_OAUTH_PROVIDERS', {})
+        if not app.oauth:
+            flash(
+                'El inicio de sesión con terceros no está disponible en este entorno. '
+                'Contacta al administrador para habilitarlo.'
+            )
         if not providers_meta:
             flash(
                 'El inicio de sesión con terceros no está configurado. '
@@ -165,6 +185,7 @@ def create_app() -> Flask:
                 email=email.lower(),
                 name=name,
                 picture=picture,
+                email_confirmed=True,
             )
             db.session.add(user)
         else:
@@ -173,8 +194,16 @@ def create_app() -> Flask:
                 user.name = name
             if picture:
                 user.picture = picture
+            if not user.email_confirmed:
+                user.email_confirmed = True
+                user.confirmation_token = None
+                user.confirmation_sent_at = None
 
         db.session.commit()
+
+        if not user.email_confirmed:
+            flash('Debes confirmar tu correo electrónico antes de iniciar sesión.')
+            return redirect(url_for('login'))
 
         session['logged_in'] = True
         session['user_id'] = user.id
@@ -351,6 +380,93 @@ def create_app() -> Flask:
                 return {'success': True}
 
         return {'success': False}
+
+    @app.route('/register', methods=['GET', 'POST'])
+    def register():
+        if request.method == 'POST':
+            email = (request.form.get('email') or '').strip().lower()
+            name = (request.form.get('name') or '').strip() or None
+
+            if not email:
+                flash('El correo electrónico es obligatorio.')
+                return render_template('register.html', name=name, email=email)
+
+            user = User.query.filter_by(email=email).first()
+
+            if user and user.email_confirmed:
+                flash('Este correo ya ha sido confirmado. Inicia sesión para continuar.')
+                return redirect(url_for('login'))
+
+            if not user:
+                user = User(
+                    provider='email',
+                    provider_user_id=email,
+                    email=email,
+                    name=name,
+                    email_confirmed=False,
+                )
+                db.session.add(user)
+            else:
+                user.provider = 'email'
+                user.provider_user_id = email
+                if name:
+                    user.name = name
+                user.email_confirmed = False
+
+            token = secrets.token_urlsafe(32)
+            user.confirmation_token = token
+            user.confirmation_sent_at = datetime.utcnow()
+
+            db.session.commit()
+
+            confirm_url = url_for('confirm_email', token=token, _external=True)
+            msg = Message('Confirma tu correo electrónico', recipients=[email])
+            msg.body = (
+                f"Hola {user.name or 'usuario'},\n\n"
+                f"Gracias por registrarte. Para activar tu cuenta, haz clic en el siguiente enlace:\n"
+                f"{confirm_url}\n\n"
+                "Si no solicitaste esta cuenta, puedes ignorar este mensaje."
+            )
+
+            try:
+                mail.send(msg)
+            except Exception as exc:  # pragma: no cover - depende de configuración externa
+                current_app.logger.exception('Error al enviar el correo de confirmación', exc_info=exc)
+                flash('No pudimos enviar el correo de confirmación. Intenta nuevamente más tarde.')
+                return render_template('register.html', name=name, email=email)
+
+            flash('Te hemos enviado un correo para confirmar tu cuenta.')
+            return redirect(url_for('login'))
+
+        return render_template('register.html')
+
+    @app.route('/confirm/<token>')
+    def confirm_email(token: str):
+        user = User.query.filter_by(confirmation_token=token).first()
+
+        if not user:
+            flash('El enlace de confirmación no es válido.')
+            return redirect(url_for('register'))
+
+        if not user.confirmation_sent_at:
+            flash('El enlace de confirmación no es válido.')
+            return redirect(url_for('register'))
+
+        expiration = user.confirmation_sent_at + timedelta(days=2)
+        if datetime.utcnow() > expiration:
+            user.confirmation_token = None
+            user.confirmation_sent_at = None
+            db.session.commit()
+            flash('El enlace de confirmación ha expirado. Solicita uno nuevo.')
+            return redirect(url_for('register'))
+
+        user.email_confirmed = True
+        user.confirmation_token = None
+        user.confirmation_sent_at = None
+        db.session.commit()
+
+        flash('¡Tu correo ha sido confirmado! Ya puedes iniciar sesión.')
+        return redirect(url_for('login'))
 
     return app
 
