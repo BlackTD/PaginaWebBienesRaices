@@ -6,7 +6,8 @@ import secrets
 from collections import OrderedDict
 from typing import Dict, Iterable, List, Optional as TypingOptional
 
-from flask import request, session
+import requests
+from flask import current_app, request, session
 from markupsafe import Markup, escape
 
 
@@ -118,6 +119,14 @@ class SubmitField(Field):
 class CSRFTokenField(Field):
     def __init__(self) -> None:
         super().__init__('', input_type='hidden')
+
+
+class HiddenField(Field):
+    def __init__(self, label: str = '', *, validators: TypingOptional[Iterable] = None) -> None:
+        super().__init__(label, validators=validators, input_type='hidden')
+
+    def _should_include_value(self) -> bool:
+        return False
 
 
 class BaseFormMeta(type):
@@ -279,13 +288,72 @@ class StringField(Field):
         placeholder: str = '',
     ) -> None:
         super().__init__(label, validators=validators, input_type='text', placeholder=placeholder)
+class GmailValidator:
+    def __init__(self, message: str | None = None) -> None:
+        self.message = message or 'Debes proporcionar una cuenta de Gmail válida.'
+
+    def __call__(self, form: BaseForm, field: Field) -> None:
+        value = (field.data or '').lower()
+        if not value.endswith('@gmail.com'):
+            raise ValidationError(self.message)
+
+
+class ReCaptchaValidator:
+    VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
+
+    def __init__(self, message: str | None = None) -> None:
+        self.message = message or 'Debes completar el captcha.'
+
+    def __call__(self, form: BaseForm, field: Field) -> None:
+        site_key = current_app.config.get('CAPTCHA_SITE_KEY')
+        secret_key = current_app.config.get('CAPTCHA_SECRET_KEY')
+        if not (site_key and secret_key):
+            field.flags['captcha_disabled'] = True
+            field.data = ''
+            return
+
+        token = field.data or ''
+        if not token:
+            raise ValidationError(self.message)
+
+        try:
+            response = requests.post(
+                self.VERIFY_URL,
+                data={
+                    'secret': secret_key,
+                    'response': token,
+                    'remoteip': request.remote_addr,
+                },
+                timeout=5,
+            )
+            payload = response.json()
+        except Exception as exc:  # pragma: no cover - network failure path
+            raise ValidationError('No se pudo verificar el captcha. Intenta nuevamente.') from exc
+
+        if not payload.get('success'):
+            raise ValidationError('Verificación de captcha inválida. Intenta nuevamente.')
+
+
+class ReCaptchaField(HiddenField):
+    def __init__(self) -> None:
+        super().__init__('', validators=[ReCaptchaValidator()])
+
+    def bind(self, form: 'BaseForm', name: str) -> 'Field':
+        bound = super().bind(form, name)
+        bound.name = 'g-recaptcha-response'
+        bound.id = 'g-recaptcha-response'
+        return bound
+
+    def __call__(self, **kwargs) -> Markup:
+        return Markup('')
 
 
 class RegistrationForm(BaseForm):
-    email = StringField('Correo electrónico', validators=[DataRequired(), Email(), Length(max=255)])
-    confirm_email = StringField(
-        'Confirmar correo (Gmail)',
-        validators=[DataRequired(), Email(), EqualTo('email', message='Los correos deben coincidir.')],
+    email = StringField('Correo principal', validators=[DataRequired(), Email(), Length(max=255)])
+    gmail = StringField(
+        'Correo Gmail',
+        validators=[DataRequired(), Email(), GmailValidator(), Length(max=255)],
+        placeholder='tuusuario@gmail.com',
     )
     name = StringField('Nombre completo (opcional)', validators=[Optional(), Length(max=255)])
     password = PasswordField('Contraseña', validators=[DataRequired()])
@@ -293,6 +361,7 @@ class RegistrationForm(BaseForm):
         'Confirmar contraseña',
         validators=[DataRequired(), EqualTo('password', message='Las contraseñas deben coincidir.')],
     )
+    captcha = ReCaptchaField()
     submit = SubmitField('Crear cuenta')
 
 

@@ -1,7 +1,10 @@
 import os
+import smtplib
+from email.message import EmailMessage
 
 from flask import Flask, current_app, flash, redirect, render_template, request, session, url_for
 from flask_migrate import Migrate
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from config import Config
 from forms import LoginForm, RegistrationForm
@@ -17,38 +20,110 @@ def create_app() -> Flask:
     db.init_app(app)
     Migrate(app, db)
 
+    def _get_serializer() -> URLSafeTimedSerializer:
+        secret_key = current_app.config['SECRET_KEY']
+        salt = current_app.config.get('SECURITY_EMAIL_SALT', 'email-confirmation')
+        return URLSafeTimedSerializer(secret_key, salt=salt)
+
+    def generate_confirmation_token(email: str) -> str:
+        serializer = _get_serializer()
+        return serializer.dumps(email)
+
+    def send_confirmation_email(user: User) -> bool:
+        mail_username = current_app.config.get('MAIL_USERNAME')
+        mail_password = current_app.config.get('MAIL_PASSWORD')
+        mail_server = current_app.config.get('MAIL_SERVER')
+        mail_port = current_app.config.get('MAIL_PORT')
+        mail_use_tls = current_app.config.get('MAIL_USE_TLS', True)
+        sender = current_app.config.get('MAIL_DEFAULT_SENDER')
+
+        if not all([mail_username, mail_password, mail_server, sender]):
+            current_app.logger.warning('Mail configuration incomplete; skipping confirmation email.')
+            return False
+
+        token = generate_confirmation_token(user.email)
+        confirm_url = url_for('confirm_email', token=token, _external=True)
+
+        message = EmailMessage()
+        message['Subject'] = 'Confirma tu cuenta'
+        message['From'] = sender
+        message['To'] = user.gmail or user.email
+        greeting_name = user.name or 'Hola'
+        message.set_content(
+            (
+                f"{greeting_name}, completa la verificación de tu cuenta haciendo clic en el siguiente enlace:\n\n"
+                f"{confirm_url}\n\n"
+                "Si no solicitaste esta cuenta, ignora este mensaje."
+            )
+        )
+
+        try:
+            with smtplib.SMTP(mail_server, mail_port) as smtp:
+                if mail_use_tls:
+                    smtp.starttls()
+                smtp.login(mail_username, mail_password)
+                smtp.send_message(message)
+        except Exception as exc:  # pragma: no cover - network failure path
+            current_app.logger.error('Error sending confirmation email: %s', exc)
+            return False
+
+        return True
+
     @app.route('/register', methods=['GET', 'POST'])
     def register():
         form = RegistrationForm(request.form if request.method == 'POST' else None)
-        captcha_enabled = bool(
-            current_app.config.get('CAPTCHA_SITE_KEY')
-            and current_app.config.get('CAPTCHA_SECRET_KEY')
-        )
+        captcha_site_key = current_app.config.get('CAPTCHA_SITE_KEY')
+        captcha_enabled = bool(captcha_site_key and current_app.config.get('CAPTCHA_SECRET_KEY'))
 
         if form.validate_on_submit():
             email = form.email.data.strip().lower()
-            confirm_email = form.confirm_email.data.strip().lower()
+            gmail = form.gmail.data.strip().lower()
             form.email.data = email
-            form.confirm_email.data = confirm_email
+            form.gmail.data = gmail
             name = form.name.data.strip() if form.name.data else None
             password = form.password.data
 
             min_length = current_app.config.get('MIN_PASSWORD_LENGTH', 8)
+            valid = True
             if len(password) < min_length:
                 form.password.errors.append(
                     f'La contraseña debe tener al menos {min_length} caracteres.'
                 )
-            elif User.query.filter_by(email=email).first():
+                valid = False
+
+            if User.query.filter_by(email=email).first():
                 form.email.errors.append('Ya existe una cuenta asociada a este correo.')
-            else:
+                valid = False
+
+            if User.query.filter_by(gmail=gmail).first():
+                form.gmail.errors.append('Ya existe una cuenta asociada a este Gmail.')
+                valid = False
+
+            if valid:
                 password_hash = generate_password_hash(password)
-                user = User(email=email, password_hash=password_hash, name=name)
+                user = User(email=email, gmail=gmail, password_hash=password_hash, name=name)
                 db.session.add(user)
                 db.session.commit()
-                flash('Cuenta creada correctamente. Ahora puedes iniciar sesión.')
+
+                email_sent = send_confirmation_email(user)
+                if email_sent:
+                    flash(
+                        'Cuenta creada correctamente. Enviamos un correo de verificación a tu Gmail.',
+                        'success',
+                    )
+                else:
+                    flash(
+                        'Cuenta creada, pero no se pudo enviar el correo de verificación. Contacta al administrador.',
+                        'warning',
+                    )
                 return redirect(url_for('login'))
 
-        return render_template('register.html', form=form, captcha_enabled=captcha_enabled)
+        return render_template(
+            'register.html',
+            form=form,
+            captcha_enabled=captcha_enabled,
+            captcha_site_key=captcha_site_key,
+        )
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -62,6 +137,11 @@ def create_app() -> Flask:
 
             if not user or not check_password_hash(user.password_hash, password):
                 form.password.errors.append('Correo o contraseña inválidos. Intenta nuevamente.')
+            elif not user.email_confirmed:
+                flash(
+                    'Tu cuenta aún no ha sido verificada. Revisa tu bandeja de entrada para confirmar tu correo.',
+                    'warning',
+                )
             elif not user.is_active:
                 flash('Tu cuenta está desactivada. Contacta al administrador para reactivarla.', 'warning')
             else:
@@ -73,6 +153,32 @@ def create_app() -> Flask:
                 return redirect(url_for('index'))
 
         return render_template('login.html', form=form)
+
+    @app.route('/confirm_email/<token>')
+    def confirm_email(token: str):
+        serializer = _get_serializer()
+        try:
+            email = serializer.loads(token, max_age=60 * 60 * 24)
+        except SignatureExpired:
+            flash('El enlace de verificación ha expirado. Registra la cuenta nuevamente.', 'warning')
+            return redirect(url_for('register'))
+        except BadSignature:
+            flash('El enlace de verificación no es válido.', 'danger')
+            return redirect(url_for('register'))
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('No se encontró la cuenta asociada al enlace de verificación.', 'danger')
+            return redirect(url_for('register'))
+
+        if user.email_confirmed:
+            flash('Tu correo ya estaba verificado. Puedes iniciar sesión.', 'info')
+        else:
+            user.email_confirmed = True
+            db.session.commit()
+            flash('Correo verificado correctamente. Ya puedes iniciar sesión.', 'success')
+
+        return redirect(url_for('login'))
 
     @app.route('/logout')
     def logout():

@@ -7,7 +7,7 @@
         <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
             <h1 class="text-3xl font-semibold text-slate-900">Crea tu cuenta</h1>
             <p class="text-sm text-slate-500">
-                Registra un correo y una contraseña segura para acceder al panel administrativo. Tu nombre es opcional.
+                Registra tu correo principal y un Gmail verificado para recibir el enlace de activación. Tu nombre es opcional.
             </p>
             <form method="post" novalidate class="space-y-5">
                 {{ form.csrf_token }}
@@ -24,9 +24,9 @@
                     {% endfor %}
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-slate-700" for="{{ form.confirm_email.id }}">{{ form.confirm_email.label.text }}</label>
-                    {{ form.confirm_email(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
-                    {% for error in form.confirm_email.errors %}
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.gmail.id }}">{{ form.gmail.label.text }}</label>
+                    {{ form.gmail(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.gmail.errors %}
                         <p class="text-xs text-rose-600">{{ error }}</p>
                     {% endfor %}
                 </div>
@@ -52,11 +52,15 @@
                     {% endfor %}
                 </div>
                 {% if captcha_enabled %}
+                    {{ form.captcha }}
                     <div class="space-y-2">
-                        <label class="text-sm font-medium text-slate-700">Captcha</label>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                            Integración de captcha pendiente de configuración.
+                        <label class="text-sm font-medium text-slate-700">Verificación</label>
+                        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
+                            <div class="g-recaptcha" data-sitekey="{{ captcha_site_key }}"></div>
                         </div>
+                        {% for error in form.captcha.errors %}
+                            <p class="text-xs text-rose-600">{{ error }}</p>
+                        {% endfor %}
                     </div>
                 {% endif %}
                 <div class="pt-2">
@@ -81,4 +85,11 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {% if captcha_enabled and captcha_site_key %}
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    {% endif %}
 {% endblock %}
