@@ -6,12 +6,11 @@ class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    gmail = db.Column(db.String(255), unique=True, nullable=True)
+    gmail = db.Column(db.String(255), unique=True, nullable=False)
+    username = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     name = db.Column(db.String(255), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, server_default=db.true())
-    email_confirmed = db.Column(db.Boolean, nullable=False, server_default=db.false())
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -21,7 +20,7 @@ class User(db.Model):
     )
 
     def __repr__(self) -> str:  # pragma: no cover - simple representation helper
-        return f'<User {self.email}>'
+        return f'<User {self.gmail}>'
 
 
 class Property(db.Model):

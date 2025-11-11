@@ -17,10 +17,12 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('users', sa.Column('gmail', sa.String(length=255), nullable=True))
-    op.create_unique_constraint('uq_users_gmail', 'users', ['gmail'])
+    with op.batch_alter_table('users', recreate='always') as batch_op:
+        batch_op.add_column(sa.Column('gmail', sa.String(length=255), nullable=True))
+        batch_op.create_unique_constraint('uq_users_gmail', ['gmail'])
 
 
 def downgrade():
-    op.drop_constraint('uq_users_gmail', 'users', type_='unique')
-    op.drop_column('users', 'gmail')
+    with op.batch_alter_table('users', recreate='always') as batch_op:
+        batch_op.drop_constraint('uq_users_gmail', type_='unique')
+        batch_op.drop_column('gmail')

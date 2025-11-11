@@ -7,7 +7,7 @@
         <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
             <h1 class="text-3xl font-semibold text-slate-900">Accede a tu cuenta</h1>
             <p class="text-sm text-slate-500">
-                Ingresa con el correo principal que registraste. Si aún no confirmas tu Gmail, revisa tu bandeja antes de iniciar sesión.
+                Ingresa tu Gmail o tu nombre de usuario junto con la contraseña que registraste.
             </p>
             <form method="post" novalidate class="space-y-5">
                 {{ form.csrf_token }}
@@ -17,9 +17,9 @@
                     {% endfor %}
                 {% endif %}
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-slate-700" for="{{ form.email.id }}">{{ form.email.label.text }}</label>
-                    {{ form.email(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
-                    {% for error in form.email.errors %}
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.identifier.id }}">{{ form.identifier.label.text }}</label>
+                    {{ form.identifier(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.identifier.errors %}
                         <p class="text-xs text-rose-600">{{ error }}</p>
                     {% endfor %}
                 </div>
