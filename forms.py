@@ -298,6 +298,17 @@ class GmailValidator:
             raise ValidationError(self.message)
 
 
+class UsernameValidator:
+    def __init__(self, message: str | None = None) -> None:
+        self.message = message or 'El nombre de usuario solo puede contener letras, números, puntos o guiones bajos.'
+        self.pattern = re.compile(r'^[a-zA-Z0-9._-]+$')
+
+    def __call__(self, form: BaseForm, field: Field) -> None:
+        value = field.data or ''
+        if not self.pattern.match(value):
+            raise ValidationError(self.message)
+
+
 class ReCaptchaValidator:
     VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 
@@ -349,23 +360,26 @@ class ReCaptchaField(HiddenField):
 
 
 class RegistrationForm(BaseForm):
-    email = StringField('Correo principal', validators=[DataRequired(), Email(), Length(max=255)])
     gmail = StringField(
-        'Correo Gmail',
+        'Gmail',
         validators=[DataRequired(), Email(), GmailValidator(), Length(max=255)],
         placeholder='tuusuario@gmail.com',
     )
-    name = StringField('Nombre completo (opcional)', validators=[Optional(), Length(max=255)])
-    password = PasswordField('Contraseña', validators=[DataRequired()])
-    confirm_password = PasswordField(
-        'Confirmar contraseña',
-        validators=[DataRequired(), EqualTo('password', message='Las contraseñas deben coincidir.')],
+    username = StringField(
+        'Nombre de usuario',
+        validators=[DataRequired(), UsernameValidator(), Length(min=3, max=150)],
+        placeholder='tuusuario',
     )
+    password = PasswordField('Contraseña', validators=[DataRequired()])
     captcha = ReCaptchaField()
     submit = SubmitField('Crear cuenta')
 
 
 class LoginForm(BaseForm):
-    email = StringField('Correo electrónico', validators=[DataRequired(), Email(), Length(max=255)])
+    identifier = StringField(
+        'Gmail o nombre de usuario',
+        validators=[DataRequired(), Length(min=3, max=255)],
+        placeholder='tuusuario@gmail.com o tuusuario',
+    )
     password = PasswordField('Contraseña', validators=[DataRequired()])
     submit = SubmitField('Iniciar sesión')

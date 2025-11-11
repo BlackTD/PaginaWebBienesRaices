@@ -7,7 +7,7 @@
         <div class="glass-card w-full max-w-md space-y-6 p-8 text-slate-600 animate-on-scroll">
             <h1 class="text-3xl font-semibold text-slate-900">Crea tu cuenta</h1>
             <p class="text-sm text-slate-500">
-                Registra tu correo principal y un Gmail verificado para recibir el enlace de activación. Tu nombre es opcional.
+                Registra tu Gmail y elige un nombre de usuario único para acceder al panel de administración.
             </p>
             <form method="post" novalidate class="space-y-5">
                 {{ form.csrf_token }}
@@ -17,13 +17,6 @@
                     {% endfor %}
                 {% endif %}
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-slate-700" for="{{ form.email.id }}">{{ form.email.label.text }}</label>
-                    {{ form.email(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
-                    {% for error in form.email.errors %}
-                        <p class="text-xs text-rose-600">{{ error }}</p>
-                    {% endfor %}
-                </div>
-                <div class="space-y-2">
                     <label class="text-sm font-medium text-slate-700" for="{{ form.gmail.id }}">{{ form.gmail.label.text }}</label>
                     {{ form.gmail(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
                     {% for error in form.gmail.errors %}
@@ -31,9 +24,9 @@
                     {% endfor %}
                 </div>
                 <div class="space-y-2">
-                    <label class="text-sm font-medium text-slate-700" for="{{ form.name.id }}">{{ form.name.label.text }}</label>
-                    {{ form.name(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
-                    {% for error in form.name.errors %}
+                    <label class="text-sm font-medium text-slate-700" for="{{ form.username.id }}">{{ form.username.label.text }}</label>
+                    {{ form.username(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
+                    {% for error in form.username.errors %}
                         <p class="text-xs text-rose-600">{{ error }}</p>
                     {% endfor %}
                 </div>
@@ -41,13 +34,6 @@
                     <label class="text-sm font-medium text-slate-700" for="{{ form.password.id }}">{{ form.password.label.text }}</label>
                     {{ form.password(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
                     {% for error in form.password.errors %}
-                        <p class="text-xs text-rose-600">{{ error }}</p>
-                    {% endfor %}
-                </div>
-                <div class="space-y-2">
-                    <label class="text-sm font-medium text-slate-700" for="{{ form.confirm_password.id }}">{{ form.confirm_password.label.text }}</label>
-                    {{ form.confirm_password(class='w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-200') }}
-                    {% for error in form.confirm_password.errors %}
                         <p class="text-xs text-rose-600">{{ error }}</p>
                     {% endfor %}
                 </div>
@@ -79,7 +65,7 @@
             </div>
             <div class="space-y-3 text-sm text-white/80">
                 <p><i class="fa-solid fa-lock"></i> Contraseñas cifradas</p>
-                <p><i class="fa-solid fa-user-check"></i> Confirmación de correo pendiente</p>
+                <p><i class="fa-solid fa-user"></i> Acceso directo con tu Gmail o usuario</p>
                 <p><i class="fa-solid fa-house"></i> Gestiona tu portafolio fácilmente</p>
             </div>
         </div>
